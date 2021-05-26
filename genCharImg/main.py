@@ -1,7 +1,5 @@
-import math
 import numpy as np
 from PIL import Image
-from matplotlib import image
 
 charset = ["@", "%", "*", "o", "+", "-", "."]
 
