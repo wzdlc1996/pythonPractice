@@ -6,6 +6,11 @@ __pycache__/
 # pycharm
 .idea
 
+# genEPUB
+genEPUB/temp
+genEPUB/book.epub
+
+
 # C extensions
 *.so
 

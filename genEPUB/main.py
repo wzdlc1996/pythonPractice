@@ -49,8 +49,8 @@ def getContent(filename):
     htmPage = bs(cont, "html.parser")
     cont = htmPage.find(id="content").text
     cont = cont.split("\n")
-    cont = "\n".join(["<p>{}</p><br>".format(x.replace("\xa0", "")) for x in cont])
-    return "<html>\n<body>\n{}\n</body>\n</html>".format(cont)
+    cont = "\n".join(["<p style=\"line-height:1.5em;font-size:1em\">{}</p><br />".format(x.replace("\xa0", "")) for x in cont])
+    return "<html><head></head><body>{}</body></html>".format(cont)
 
 
 def id_omit_slash(idstr):
@@ -121,7 +121,6 @@ def makeTree():
             )
         cov_indx.append("cover{}.html".format(ind))
         ind += 1
-
 
     with open("./temp/OEBPS/content.opf", "w") as f:
         # opf file specifies the order of contents
