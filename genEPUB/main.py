@@ -32,18 +32,29 @@ figTree = {
     "chap_01_fig": ["cp_01_%.2d.jpg" % k for k in range(1, 21)],
     "chap_02_fig": ["cp_02_%.2d.jpg" % k for k in range(1, 21)]
 }
-cover = "cp_01_01.jpg"
+covers = [
+    "cp_01_01.jpg",
+    "cp_02_04.jpg"
+    ]
 
 bookmeta = {
     "title": "Fate/Requiem",
     "creator": "wzdlc1996"
 }
 
+
 def getContent(filename):
     with open(filename, "rb") as f:
         cont = f.read()
     htmPage = bs(cont, "html.parser")
-    return "<html>\n<body>\n{}\n</body>\n</html>".format(htmPage.find(id="content"))
+    cont = htmPage.find(id="content").text
+    cont = cont.split("\n")
+    cont = "\n".join(["<p>{}</p><br>".format(x.replace("\xa0", "")) for x in cont])
+    return "<html>\n<body>\n{}\n</body>\n</html>".format(cont)
+
+
+def id_omit_slash(idstr):
+    return idstr.replace("/", "_")
 
 
 def makeTree():
@@ -57,16 +68,19 @@ def makeTree():
     os.mkdir("./temp/META-INF")
     with open("./temp/META-INF/container.xml", "w") as f:
         f.write(
-            """<?xml version="1.0" encoding="UTF-8" ?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-<rootfiles>
-<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-</rootfiles>
-</container>"""
+            (
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+                "<container version=\"1.0\" xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\">\n"
+                "<rootfiles>"
+                "<rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/>"
+                "</rootfiles>\n"
+                "</container>"
+            )
         )
     os.mkdir("./temp/OEBPS")
     os.mkdir("./temp/OEBPS/text")
 
+    # Generate the text directory
     files = []
     ind = 0
     for x in textTree:
@@ -93,76 +107,107 @@ def makeTree():
                 )
             f.write("</body></html>")
 
+    ind = 0
+    cov_indx = []
+    for cover in covers:
+        shutil.copyfile(tar_dir + cover, "./temp/OEBPS/images/cover{}".format(ind))
+        with open("./temp/OEBPS/cover{}.html".format(ind), "w") as f:
+            f.write(
+                (
+                    "<html><body>"
+                    "<img src=\"images/cover{}\" />"
+                    "</body></html>"
+                ).format(ind)
+            )
+        cov_indx.append("cover{}.html".format(ind))
+        ind += 1
 
-    shutil.copyfile(tar_dir + cover, "./temp/OEBPS/images/cover")
 
     with open("./temp/OEBPS/content.opf", "w") as f:
+        # opf file specifies the order of contents
         metas = "\n".join(["<dc:{}>{}</dc:{}>".format(x, v, x) for _, (x, v) in enumerate(bookmeta.items())])
         manis = "\n".join(
-            ["<item id=\"{}\" href=\"{}\" media-type=\"application/xhtml+xml\"/>".format(x, x) for x in (files + imgs)]
+            [
+                "<item id=\"{}\" href=\"{}\" media-type=\"application/xhtml+xml\"/>".format(
+                    id_omit_slash(x), x
+                ) for x in (cov_indx + files + imgs)
+            ]
         )
 
         spines = "\n".join(
-            ["<itemref idref=\"{}\" />".format(x) for x in (files + imgs)]
+            ["<itemref idref=\"{}\" />".format(id_omit_slash(x)) for x in (cov_indx + files + imgs)]
         )
 
         f.write(
-        """<?xml version="1.0" encoding="UTF-8" ?>
-<package version="2.0" unique-identifier="PrimaryID" xmlns="http://www.idpf.org/2007/opf">
-<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-{}
-<meta name="cover" content="cover" />
-</metadata>
-<manifest>
-{}
-<item id="ncx" href="content.ncx" media-type="application/x-dtbncx+xml"/>
-<item id="cover" href="images/cover" media-type="image/jpeg"/>
-</manifest>
-<spine toc="ncx">
-{}
-</spine>
-</package>
-""".format(metas, manis, spines))
+            (
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
+                "<package version=\"2.0\" unique-identifier=\"PrimaryID\" xmlns=\"http://www.idpf.org/2007/opf\">\n"
+                "<metadata xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:opf=\"http://www.idpf.org/2007/opf\">\n"
+                "{}\n"
+                "</metadata>\n"
+                "<manifest>\n"
+                "{}\n"
+                "<item id=\"ncx\" href=\"content.ncx\" media-type=\"application/x-dtbncx+xml\"/>\n"
+                "<item id=\"cover\" href=\"images/cover\" media-type=\"image/jpeg\"/>\n"
+                "</manifest>\n"
+                "<spine toc=\"ncx\">{}</spine>\n"
+                "</package>"
+            ).format(metas, manis, spines)
+        )
 
     navmap = []
     ind = -1
     indf = -1
     for cp in textTree:
+        indf += 1
+        navmap.append(
+            (
+                "<navPoint id='{}' playOrder='{}'>"
+                "<navLabel>"
+                "<text>cover</text>"
+                "</navLabel>"
+                "<content src='{}' />"
+                "</navPoint>"
+            ).format(id_omit_slash(cov_indx[indf]), len(navmap) + 1, cov_indx[indf])
+        )
         for sec in textTree[cp]:
             ind += 1
-            navmap.append("""<navPoint id='{}' playOrder='{}'>
-<navLabel>
-<text>chapter: {}</text>
-</navLabel>
-<content src='{}' />
-</navPoint>""".format(files[ind], len(navmap) + 1, "%.3d" % (ind + 1), files[ind]))
-
-        indf += 1
-        navmap.append("""<navPoint id='{}' playOrder='{}'>
-<navLabel>
-<text>images</text>
-</navLabel>
-<content src='{}' />
-</navPoint>
-""".format(imgs[indf], len(navmap) + 1, imgs[indf]))
+            navmap.append(
+                (
+                    "<navPoint id='{}' playOrder='{}'>"
+                    "<navLabel>"
+                    "<text>chapter: {}</text>"
+                    "</navLabel>"
+                    "<content src='{}' />"
+                    "</navPoint>"
+                ).format(id_omit_slash(files[ind]), len(navmap) + 1, "%.3d" % (ind + 1), files[ind])
+            )
 
 
-    ncx = """<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
-<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
-<head>
-  <meta name="dtb:uid" content=" "/>
-  <meta name="dtb:depth" content="-1"/>
-  <meta name="dtb:totalPageCount" content="0"/>
-  <meta name="dtb:maxPageNumber" content="0"/>
-</head>
- <docTitle><text></text></docTitle>
- <docAuthor><text></text></docAuthor>
-<navMap>
-{}
-</navMap>
-</ncx>
-    """.format("\n".join(navmap))
+        navmap.append(
+            (
+                    "<navPoint id='{}' playOrder='{}'>"
+                    "<navLabel><text>images</text></navLabel>"
+                    "<content src='{}' />"
+                    "</navPoint>\n"
+             ).format(id_omit_slash(imgs[indf]), len(navmap) + 1, imgs[indf])
+        )
+
+    ncx = (
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+        "<!DOCTYPE ncx PUBLIC \"-//NISO//DTD ncx 2005-1//EN\" \"http://www.daisy.org/z3986/2005/ncx-2005-1.dtd\">\n"
+        "<ncx version=\"2005-1\" xmlns=\"http://www.daisy.org/z3986/2005/ncx/\">\n"
+        "<head>\n"
+        "<meta name=\"dtb:uid\" content=\" \"/>\n"
+        "<meta name=\"dtb:depth\" content=\"-1\"/>\n"
+        "<meta name=\"dtb:totalPageCount\" content=\"0\"/>\n"
+        "<meta name=\"dtb:maxPageNumber\" content=\"0\"/>\n"
+        "</head>\n"
+        "<docTitle><text>test</text></docTitle>\n"
+        "<docAuthor><text>test</text></docAuthor>\n"
+        "<navMap>{}</navMap>\n"
+        "</ncx>"
+    ).format("\n".join(navmap))
 
     with open("./temp/OEBPS/content.ncx", "w") as f:
         f.write(ncx)
@@ -174,8 +219,6 @@ def makeTree():
             epub.write(os.path.join(d, f))
     epub.close()
     #shutil.rmtree("../temp")
-    
-
 
 
 if __name__ == "__main__":

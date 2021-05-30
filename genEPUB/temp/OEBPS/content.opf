@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<package version="2.0" unique-identifier="PrimaryID" xmlns="http://www.idpf.org/2007/opf">
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+<dc:title>Fate/Requiem</dc:title>
+<dc:creator>wzdlc1996</dc:creator>
+</metadata>
+<manifest>
+<item id="cover0.html" href="cover0.html" media-type="application/xhtml+xml"/>
+<item id="cover1.html" href="cover1.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_01.html" href="text/chap_01/01.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_02.html" href="text/chap_01/02.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_03.html" href="text/chap_01/03.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_04.html" href="text/chap_01/04.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_05.html" href="text/chap_01/05.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_06.html" href="text/chap_01/06.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_07.html" href="text/chap_01/07.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_08.html" href="text/chap_01/08.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_01_09.html" href="text/chap_01/09.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_10.html" href="text/chap_02/10.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_11.html" href="text/chap_02/11.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_12.html" href="text/chap_02/12.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_13.html" href="text/chap_02/13.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_14.html" href="text/chap_02/14.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_15.html" href="text/chap_02/15.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_16.html" href="text/chap_02/16.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_17.html" href="text/chap_02/17.html" media-type="application/xhtml+xml"/>
+<item id="text_chap_02_18.html" href="text/chap_02/18.html" media-type="application/xhtml+xml"/>
+<item id="chap_01_fig.html" href="chap_01_fig.html" media-type="application/xhtml+xml"/>
+<item id="chap_02_fig.html" href="chap_02_fig.html" media-type="application/xhtml+xml"/>
+<item id="ncx" href="content.ncx" media-type="application/x-dtbncx+xml"/>
+<item id="cover" href="images/cover" media-type="image/jpeg"/>
+</manifest>
+<spine toc="ncx"><itemref idref="cover0.html" />
+<itemref idref="cover1.html" />
+<itemref idref="text_chap_01_01.html" />
+<itemref idref="text_chap_01_02.html" />
+<itemref idref="text_chap_01_03.html" />
+<itemref idref="text_chap_01_04.html" />
+<itemref idref="text_chap_01_05.html" />
+<itemref idref="text_chap_01_06.html" />
+<itemref idref="text_chap_01_07.html" />
+<itemref idref="text_chap_01_08.html" />
+<itemref idref="text_chap_01_09.html" />
+<itemref idref="text_chap_02_10.html" />
+<itemref idref="text_chap_02_11.html" />
+<itemref idref="text_chap_02_12.html" />
+<itemref idref="text_chap_02_13.html" />
+<itemref idref="text_chap_02_14.html" />
+<itemref idref="text_chap_02_15.html" />
+<itemref idref="text_chap_02_16.html" />
+<itemref idref="text_chap_02_17.html" />
+<itemref idref="text_chap_02_18.html" />
+<itemref idref="chap_01_fig.html" />
+<itemref idref="chap_02_fig.html" /></spine>
+</package>

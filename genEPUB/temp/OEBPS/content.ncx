@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
+<head>
+<meta name="dtb:uid" content=" "/>
+<meta name="dtb:depth" content="-1"/>
+<meta name="dtb:totalPageCount" content="0"/>
+<meta name="dtb:maxPageNumber" content="0"/>
+</head>
+<docTitle><text>test</text></docTitle>
+<docAuthor><text>test</text></docAuthor>
+<navMap><navPoint id='cover0.html' playOrder='1'><navLabel><text>cover</text></navLabel><content src='cover0.html' /></navPoint>
+<navPoint id='text_chap_01_01.html' playOrder='2'><navLabel><text>chapter: 001</text></navLabel><content src='text/chap_01/01.html' /></navPoint>
+<navPoint id='text_chap_01_02.html' playOrder='3'><navLabel><text>chapter: 002</text></navLabel><content src='text/chap_01/02.html' /></navPoint>
+<navPoint id='text_chap_01_03.html' playOrder='4'><navLabel><text>chapter: 003</text></navLabel><content src='text/chap_01/03.html' /></navPoint>
+<navPoint id='text_chap_01_04.html' playOrder='5'><navLabel><text>chapter: 004</text></navLabel><content src='text/chap_01/04.html' /></navPoint>
+<navPoint id='text_chap_01_05.html' playOrder='6'><navLabel><text>chapter: 005</text></navLabel><content src='text/chap_01/05.html' /></navPoint>
+<navPoint id='text_chap_01_06.html' playOrder='7'><navLabel><text>chapter: 006</text></navLabel><content src='text/chap_01/06.html' /></navPoint>
+<navPoint id='text_chap_01_07.html' playOrder='8'><navLabel><text>chapter: 007</text></navLabel><content src='text/chap_01/07.html' /></navPoint>
+<navPoint id='text_chap_01_08.html' playOrder='9'><navLabel><text>chapter: 008</text></navLabel><content src='text/chap_01/08.html' /></navPoint>
+<navPoint id='text_chap_01_09.html' playOrder='10'><navLabel><text>chapter: 009</text></navLabel><content src='text/chap_01/09.html' /></navPoint>
+<navPoint id='chap_01_fig.html' playOrder='11'><navLabel><text>images</text></navLabel><content src='chap_01_fig.html' /></navPoint>
+
+<navPoint id='cover1.html' playOrder='12'><navLabel><text>cover</text></navLabel><content src='cover1.html' /></navPoint>
+<navPoint id='text_chap_02_10.html' playOrder='13'><navLabel><text>chapter: 010</text></navLabel><content src='text/chap_02/10.html' /></navPoint>
+<navPoint id='text_chap_02_11.html' playOrder='14'><navLabel><text>chapter: 011</text></navLabel><content src='text/chap_02/11.html' /></navPoint>
+<navPoint id='text_chap_02_12.html' playOrder='15'><navLabel><text>chapter: 012</text></navLabel><content src='text/chap_02/12.html' /></navPoint>
+<navPoint id='text_chap_02_13.html' playOrder='16'><navLabel><text>chapter: 013</text></navLabel><content src='text/chap_02/13.html' /></navPoint>
+<navPoint id='text_chap_02_14.html' playOrder='17'><navLabel><text>chapter: 014</text></navLabel><content src='text/chap_02/14.html' /></navPoint>
+<navPoint id='text_chap_02_15.html' playOrder='18'><navLabel><text>chapter: 015</text></navLabel><content src='text/chap_02/15.html' /></navPoint>
+<navPoint id='text_chap_02_16.html' playOrder='19'><navLabel><text>chapter: 016</text></navLabel><content src='text/chap_02/16.html' /></navPoint>
+<navPoint id='text_chap_02_17.html' playOrder='20'><navLabel><text>chapter: 017</text></navLabel><content src='text/chap_02/17.html' /></navPoint>
+<navPoint id='text_chap_02_18.html' playOrder='21'><navLabel><text>chapter: 018</text></navLabel><content src='text/chap_02/18.html' /></navPoint>
+<navPoint id='chap_02_fig.html' playOrder='22'><navLabel><text>images</text></navLabel><content src='chap_02_fig.html' /></navPoint>
+</navMap>
+</ncx>
