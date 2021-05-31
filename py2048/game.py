@@ -1,8 +1,17 @@
 import numpy as np
 
+
 class board:
     def __init__(self):
         self.body = np.zeros((4, 4), dtype=int)
+
+    def __getitem__(self, slc):
+        x = self.body[slc]
+        if x == 0:
+            tex = ""
+        else:
+            tex = str(2 ** x)
+        return tex
 
     def status(self):
         return len(self.getEmpty()) == 0, 2 ** np.max(self.body)
@@ -12,8 +21,13 @@ class board:
 
     def setRandBox(self):
         emptyBoxes = self.getEmpty()
-        ind = np.random.choice(np.arange(len(emptyBoxes)))
-        self.body[tuple(emptyBoxes[ind])] = 1
+        try:
+            ind = np.random.choice(np.arange(len(emptyBoxes)))
+            self.body[tuple(emptyBoxes[ind])] = 1
+            return True
+        except ValueError:
+            return False
+
 
     def merge(self) -> bool:
         """
@@ -25,15 +39,16 @@ class board:
         changed = False
         for i in range(4):
             items = self.body[i, :]
+            back = items.copy()
             nums = items[np.nonzero(items)]
             for j in range(len(nums) - 1):
                 if nums[j] == nums[j+1]:
-                    changed = True
                     nums[j] += 1
                     nums[j+1] = 0
             nums = nums[np.nonzero(nums)]
-            self.body[i, :] = np.append(nums, np.zeros(4 - len(nums)))
-
+            res = np.append(nums, np.zeros(4 - len(nums)))
+            self.body[i, :] = res
+            changed = changed or (not ((res == back).all()))
         return changed
 
     def rever(self):
@@ -72,9 +87,11 @@ class board:
         else:
             raise ValueError("Invalid movement")
 
-        self.setRandBox()
+        res = True
+        if changed:
+            res = self.setRandBox()
 
-        return changed
+        return changed, res
 
     def __str__(self):
         return "\n".join(["\t".join([str(y) for y in x]) for x in self.body])
