@@ -16,6 +16,9 @@ class board:
     def status(self):
         return len(self.getEmpty()) == 0, 2 ** np.max(self.body)
 
+    def score(self):
+        return 2 ** np.max(self.body)
+
     def getEmpty(self):
         return np.argwhere(self.body == 0)
 
@@ -27,6 +30,10 @@ class board:
             return True
         except ValueError:
             return False
+
+    def bodyFlat(self):
+        # np.resize will make a copy of the array.
+        return np.resize(self.body, (16,))
 
 
     def merge(self) -> bool:
@@ -62,7 +69,8 @@ class board:
         Update the board according to the move
 
         :param move: element of {"w", "a", "s", "d"}
-        :return: whether the board is changed or not
+        :return changed: whether the board is changed or not
+        :return res: will the game continue
         """
         if move == "a":
             changed = self.merge()
