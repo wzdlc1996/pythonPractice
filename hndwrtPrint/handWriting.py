@@ -24,7 +24,7 @@ class char2imgFromFont:
         dr = ImageDraw.Draw(img)
         w, h = font.getsize(char)
         pos = [(strip_size - w) / 2, (strip_size - h) / 2]
-        dr.text(pos, char, font=font)
+        dr.text(pos, char, font=font, fill="black")
         return img
 
     def getSize(self):
@@ -32,6 +32,7 @@ class char2imgFromFont:
 
 
 if __name__ == "__main__":
-    # img = char2imgFromFont("\n")
-    # img.save("./temp.png")
-    artic2img()
+    gen = char2imgFromFont()
+    img = gen("啊")
+    img.save("./temp.png")
+
