@@ -20,12 +20,12 @@ class tree:
                 "right": None,
                 "parent": None,
                 "isRoot": False,
-                "isLeaf": False
+                "isLeaf": True
             }
             if i in self.treeDic:
                 t["left"], t["right"] = self.treeDic[i]
-            else:
-                t["isLeaf"] = True
+                if self.treeDic[i] != (None, None):
+                    t["isLeaf"] = False
             t["isRoot"] = True
             for n, (nl, nr) in self.treeDic.items():
                 if i in [nl, nr]:
@@ -108,19 +108,36 @@ class tree:
         return "\n".join(ff.txt)
 
     def __str__(self):
-        return "\n".join(self.vis(t.root)[0])
+        return "\n".join(self.vis(self.root)[0])
 
 if __name__ == "__main__":
-    treeDict = {
-        0: (1, 2),
-        1: (3, None)
-    }
-    description = [
-        "Grand",
-        "Par: L",
-        "Par: R",
-        "Child"
-    ]
+    treeDict = {}
+    i = 0
+    while True:
+        c = i
+        l = input(f"L Child of {i}([Stop], y for Yes/n for None): ")
+        if l == "":
+            break
+        r = input(f"R Child of {i}([Stop], y for Yes/n for None): ")
+        if r == "":
+            break
+        if l == "y":
+            i += 1
+            l = i
+        else:
+            l = None
+        if r == "y":
+            i += 1
+            r = i
+        else:
+            r = None
+        treeDict[c] = (l, r)
+        i = c + 1
+    description = [str(x) for x in range(i)]
+    print("preview:\n" + tree(treeDict, description).__str__())
+
+    for x in range(i):
+        description[x] = input(f"Description for node {x}: ")
     t = tree(treeDict, description)
     print(t.plainVis())
     print(t)
