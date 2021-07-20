@@ -11,6 +11,9 @@ __pycache__/
 genEPUB/temp
 genEPUB/book.epub
 
+# hndwrtPrint
+hndwrtPrint/test
+
 
 
 
