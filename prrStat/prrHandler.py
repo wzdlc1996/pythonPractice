@@ -1,6 +1,7 @@
 import re
 import requests as rq
 import bs4
+from datetime import datetime as dt
 
 
 def idToURL(ident):
@@ -9,6 +10,25 @@ def idToURL(ident):
 
 def idToCitedURL(ident):
     return "https://journals.aps.org/prresearch/cited-by/{}".format(ident)
+
+
+def getIssues():
+    pass
+
+
+def parsePubInfo(pub):
+    try:
+        res = " ".join([x.string for x in pub])
+    except:
+        res = ""
+    return res
+
+def parseString(item):
+    try:
+        res = item.string
+    except:
+        res = ""
+    return res
 
 
 def queryIssuePaperList(url):
@@ -28,8 +48,8 @@ def queryCitingListPerPage(url):
     page = bs4.BeautifulSoup(rq.get(url).content, features="lxml").find_all("div", class_="citing")
     lis = []
     for z in page:
-        title = z.find(class_="title").string
-        autho = z.find(class_="authors").string
+        title = parseString(z.find(class_="title"))
+        autho = parseString(z.find(class_="authors"))
         pub = parsePubInfo(z.find(class_="pub-info"))
         lis.append({
             "title": title,
@@ -53,25 +73,17 @@ def queryCitingList(ident):
     return lis
 
 
-def getIssues():
-    pass
-
-
-def parsePubInfo(pub):
-    return " ".join([x.string for x in pub])
-
-
 def getPapers():
     base = "https://journals.aps.org/prresearch/subjects?page={}"
-    pgNum = 126
+    pgNum = 1
     lis = []
     while True:
         temp = []
         url = base.format(pgNum)
         page = bs4.BeautifulSoup(rq.get(url).content, features="lxml").find_all("div", class_="article")
         for z in page:
-            title = z.find(class_="title").string
-            autho = z.find(class_="authors").string
+            title = parseString(z.find(class_="title"))
+            autho = parseString(z.find(class_="authors"))
             pub = parsePubInfo(z.find(class_="pub-info"))
             ind = z["data-id"]
             temp.append({
@@ -83,7 +95,8 @@ def getPapers():
         if len(temp) == 0:
             break
         lis += temp
-        print("Page: {} done".format(pgNum))
+        if pgNum % 10 == 0:
+            print("Page: {} done at {}".format(pgNum, dt.ctime(dt.now())))
         pgNum += 1
     return lis
 
@@ -91,7 +104,8 @@ def getPapers():
 if __name__ == "__main__":
     import json
     import os
-    import progressbar
+    import progressbar as psb
+
     if "prr_pubs" not in os.listdir():
         lis = getPapers()
         with open("./prr_pubs", "w") as f:
@@ -99,9 +113,9 @@ if __name__ == "__main__":
     else:
         with open("./prr_pubs", "r") as f:
             lis = json.load(f)
-        lis = lis[-3:]
-        for item in progressbar(lis):
-            citings = queryCitingList(item)
-            item["cited-by"] = citings
-        with open("./prr_pubs_full", "w") as f:
-            json.dump(lis, f)
+
+    for item in psb.progressbar(lis):
+        citings = queryCitingList(item["identifier"])
+        item["cited-by"] = citings
+    with open("./prr_pubs_full", "w") as f:
+        json.dump(lis, f)
