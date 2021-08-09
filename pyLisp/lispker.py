@@ -1,9 +1,21 @@
 import re
 
+def _plus(x):
+    return sum(x)
+
+def _minus(x):
+    return -x[0]
+
+def _product(x):
+    z = 1
+    for p in x:
+        z *= p
+    return z
+
 BuiltInFunctions = {
-    "Plus": None,
-    "Minus": None,
-    "Product": None
+    "Plus": _plus,
+    "Minus": _minus,
+    "Product": _product
 }
 
 class AtomParseError(Exception):
@@ -29,7 +41,7 @@ def atomParser(atom):
         z = parseNumber(atom)
     else:
         raise AtomParseError(atom)
-    return tree(z)
+    return ASTree(z)
 
 
 def parser(prog):
@@ -40,30 +52,42 @@ def parser(prog):
     if prog[0] != "(" or prog[-1] != ")":
         return atomParser(prog)
     else:
-        items = re.findall(r"[\w\d]+|\(.*\)", prog[1:-1])
-        func = parser(items[0])
-        node = tree(func)
+        items = re.findall(r"[\w\d]+|\(.*?\)", prog[1:-1])
+        node = parser(items[0])
         for ch in items[1:]:
             node.addChild(parser(ch))
         return node
 
 
-class tree:
+class ASTree:
     def __init__(self, data):
         self.data = data
         self.children = []
         self.parent = None
-
-    def resetData(self, newd):
-        self.data = newd
         
     def setParent(self, par):
         self.parent = par
 
     def addChild(self, child):
-        assert isinstance(child, tree)
+        assert isinstance(child, ASTree)
         child.setParent(self)
         self.children.append(child)
+
+    def evaluate(self, knowledge=None):
+        fs = {}
+        fs.update(BuiltInFunctions)
+        if knowledge is not None:
+            fs.update(knowledge)
+        if len(self.children) == 0:
+            return self.data
+        else:
+            param = [x.evaluate(knowledge) for x in self.children]
+            try:
+                return fs[self.data](param)
+            except KeyError:
+                print(fs)
+                print(self.data)
+                return 0
 
     def __str__(self):
         chlen = len(self.children)
@@ -90,5 +114,13 @@ class tree:
                     res += "\n"
             return res
 
+
+def evaler(ast, knowl=None):
+    assert isinstance(ast, ASTree)
+    return ast.evaluate(knowl)
+
+
 if __name__ == "__main__":
-    print(parser("(Plus 1 2 (Minus 1))"))
+    ast = parser("(Plus 1 3 (Minus 2) (Product 4 5 6 7))")
+    print(ast)
+    print(f"Eval: {evaler(ast)}")
