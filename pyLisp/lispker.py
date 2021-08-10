@@ -1,22 +1,14 @@
 import re
 
-def _plus(x):
-    return sum(x)
 
-def _minus(x):
-    return -x[0]
+class BuiltinFunctionError(Exception):
+    def __init__(self, expr, message):
+        self.expr = expr
+        self.mess = message
 
-def _product(x):
-    z = 1
-    for p in x:
-        z *= p
-    return z
+    def __str__(self):
+        return f"Input {self.expr} {self.mess}"
 
-BuiltInFunctions = {
-    "Plus": _plus,
-    "Minus": _minus,
-    "Product": _product
-}
 
 class AtomParseError(Exception):
     def __init__(self, expr):
@@ -24,6 +16,65 @@ class AtomParseError(Exception):
 
     def __str__(self):
         return f"{self.expr} is neither built-in function nor supported data type."
+
+
+def _plus(x):
+    return sum(x), False
+
+
+def _minus(x):
+    return -x[0], False
+
+
+def _product(x):
+    z = 1
+    for p in x:
+        z *= p
+    return z, False
+
+
+def _if(x):
+    if len(x) != 3:
+        raise BuiltinFunctionError(x, f"If accepts 3 parameters while {len(x)} is given.")
+    if x[0]:
+        return x[1], False
+    else:
+        return x[2], False
+
+
+def _repeat(x):
+    return [x[1]] * x[0], False
+
+
+class builtinList(list):
+    def __init__(self, x):
+        super().__init__(x)
+        self.x = x
+
+    def __str__(self):
+        return "(List " + " ".join([str(z) for z in self.x]) + ")"
+
+
+def _list(x):
+    return builtinList(x), True
+
+
+def _join(x):
+    z = []
+    for s in x:
+        z.extend(s)
+    return _list(z)
+
+
+BuiltInFunctions = {
+    "Plus": _plus,
+    "Minus": _minus,
+    "Product": _product,
+    "If": _if,
+    "Repeat": _repeat,
+    "List": _list,
+    "Join": _join
+}
 
 
 def isNumber(x):
@@ -44,6 +95,54 @@ def atomParser(atom):
     return ASTree(z)
 
 
+def bracketSubIntegrate(sub) -> str:
+    x = ""
+    for i, item in enumerate(sub):
+        if item == "(":
+            x += "("
+        elif item == ")":
+            x = x[:-1] + ")"
+            if i != len(sub) - 1:
+                x += " "
+        else:
+            x += item + " "
+    return x
+
+
+def separateByBracket(prog) -> list:
+    """
+    Separate the most simple lisp program by brackets
+    :param prog: one-line program without outer like "Plus 1 (Minus 10)"
+    :return: the list of items, like ["Plus", "1", "(Minus 10)"]
+    """
+    if "(" not in prog and ")" not in prog:
+        return prog.split()
+    else:
+        splitted = prog.replace("(", " ( ").replace(")", " ) ").split()
+        res = []
+        meetBracket = False
+        tembrck = 0
+        for x in splitted:
+            if x == "(":
+                tembrck += 1
+                if not meetBracket:
+                    meetBracket = True
+                    res.append(["("])
+                    continue
+            elif x == ")":
+                tembrck -= 1
+                if meetBracket and tembrck == 0:
+                    meetBracket = False
+                    res[-1].append(")")
+                    res[-1] = bracketSubIntegrate(res[-1])
+                    continue
+            if not meetBracket:
+                res.append(x)
+            else:
+                res[-1].append(x)
+        return res
+
+
 def parser(prog):
     """
     Parse the most simple lisp program.
@@ -52,7 +151,7 @@ def parser(prog):
     if prog[0] != "(" or prog[-1] != ")":
         return atomParser(prog)
     else:
-        items = re.findall(r"[\w\d]+|\(.*?\)", prog[1:-1])
+        items = separateByBracket(prog[1:-1])
         node = parser(items[0])
         for ch in items[1:]:
             node.addChild(parser(ch))
@@ -79,9 +178,15 @@ class ASTree:
         if knowledge is not None:
             fs.update(knowledge)
         if len(self.children) == 0:
-            return self.data
+            return self.data, False
         else:
-            param = [x.evaluate(knowledge) for x in self.children]
+            param = []
+            for x in self.children:
+                z, holdStruct = x.evaluate(knowledge)
+                if not holdStruct and isinstance(z, list):
+                    param.extend(z)
+                else:
+                    param.append(z)
             try:
                 return fs[self.data](param)
             except KeyError:
@@ -117,10 +222,10 @@ class ASTree:
 
 def evaler(ast, knowl=None):
     assert isinstance(ast, ASTree)
-    return ast.evaluate(knowl)
+    return ast.evaluate(knowl)[0]
 
 
 if __name__ == "__main__":
-    ast = parser("(Plus 1 3 (Minus 2) (Product 4 5 6 7))")
-    print(ast)
-    print(f"Eval: {evaler(ast)}")
+    prog = "(Join (List 1) (List (If 1 (List 1 2 3) 0)))"
+    ast = parser(prog)
+    print(f"-\tCode:\n{prog}\n-\tAbstract Syntax Tree:\n{ast}\n-\tEval:\n{evaler(ast)}")
