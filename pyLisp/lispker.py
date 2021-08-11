@@ -19,31 +19,31 @@ class AtomParseError(Exception):
 
 
 def _plus(x):
-    return sum(x), False
+    return sum(x), {}
 
 
 def _minus(x):
-    return -x[0], False
+    return -x[0], {}
 
 
 def _product(x):
     z = 1
     for p in x:
         z *= p
-    return z, False
+    return z, {}
 
 
 def _if(x):
     if len(x) != 3:
         raise BuiltinFunctionError(x, f"If accepts 3 parameters while {len(x)} is given.")
     if x[0]:
-        return x[1], False
+        return x[1], {}
     else:
-        return x[2], False
+        return x[2], {}
 
 
-def _repeat(x):
-    return [x[1]] * x[0], False
+# def _repeat(x):
+#     return [x[0]] * x[1], {}
 
 
 class builtinList(list):
@@ -56,7 +56,7 @@ class builtinList(list):
 
 
 def _list(x):
-    return builtinList(x), True
+    return builtinList(x), {}
 
 
 def _join(x):
@@ -66,14 +66,18 @@ def _join(x):
     return _list(z)
 
 
+def _set(x):
+    return x[1], {x[0]: x[1]}
+
+
 BuiltInFunctions = {
     "Plus": _plus,
     "Minus": _minus,
     "Product": _product,
     "If": _if,
-    "Repeat": _repeat,
     "List": _list,
-    "Join": _join
+    "Join": _join,
+    "Set": _set
 }
 
 
@@ -86,12 +90,10 @@ def parseNumber(x):
 
 
 def atomParser(atom):
-    if atom in BuiltInFunctions:
-        z = atom
-    elif isNumber(atom):
+    if isNumber(atom):
         z = parseNumber(atom)
     else:
-        raise AtomParseError(atom)
+        z = atom
     return ASTree(z)
 
 
@@ -166,33 +168,53 @@ class ASTree:
         
     def setParent(self, par):
         self.parent = par
+        if self not in self.parent.children:
+            self.parent.addChild(self)
 
     def addChild(self, child):
         assert isinstance(child, ASTree)
-        child.setParent(self)
-        self.children.append(child)
+        if child not in self.children:
+            self.children.append(child)
+            child.setParent(self)
+
+    def addChildren(self, children):
+        assert isinstance(children, list)
+        for child in children:
+            self.addChild(child)
 
     def evaluate(self, knowledge=None):
+        """
+        Evaluate the expression with knowledge.
+        :param dict knowledge: the knowledge to use in the evaluation. Default None to use built-in functions
+        :returns:
+            -  result - the result of evaluation
+            -  newkon - new knowledge to be updated
+        """
         fs = {}
         fs.update(BuiltInFunctions)
         if knowledge is not None:
             fs.update(knowledge)
-        if len(self.children) == 0:
-            return self.data, False
+
+        # Special operation for some built-in functions
+        if isinstance(self.data, int):
+            return self.data, {}
+        elif self.data == "Set":
+            varname = self.children[0].data
+            varval, kk = self.children[1].evaluate(fs)
+            res, know = _set([varname, varval])
+            know.update(kk)
+            return res, know
         else:
             param = []
             for x in self.children:
-                z, holdStruct = x.evaluate(knowledge)
-                if not holdStruct and isinstance(z, list):
-                    param.extend(z)
-                else:
-                    param.append(z)
-            try:
-                return fs[self.data](param)
-            except KeyError:
-                print(fs)
-                print(self.data)
-                return 0
+                z, know = x.evaluate(fs)
+                fs.update(know)
+                param.append(z)
+            if len(param) == 0:
+                res, know = fs[self.data], {}
+            else:
+                res, know = fs[self.data](param)
+            return res, know
 
     def __str__(self):
         chlen = len(self.children)
@@ -220,12 +242,32 @@ class ASTree:
             return res
 
 
+class Process:
+    def __init__(self):
+        self.knowledge = {}
+        self.knowledge.update(BuiltInFunctions)
+        self.vstack = []
+
+    def eval(self, prog):
+        ast = parser(prog)
+        res, newk = ast.evaluate(self.knowledge)
+        self.vstack.append(res)
+        self.knowledge.update(newk)
+
+    def result(self):
+        return self.vstack.pop()
+
+
 def evaler(ast, knowl=None):
     assert isinstance(ast, ASTree)
     return ast.evaluate(knowl)[0]
 
 
 if __name__ == "__main__":
-    prog = "(Join (List 1) (List (If 1 (List 1 2 3) 0)))"
+    # Problem: special treat for the first element in the program. This makes the head should be atom. Harmful for Lisp
+    # property. To overcome this, do not use ASTree, use python.list instead. The iteratively evaluation would works as
+    # a tree. So we do not make a tree explicitly.
+    prog = "(Join (List (If 1 (List 1 2 3) 0)))"
     ast = parser(prog)
-    print(f"-\tCode:\n{prog}\n-\tAbstract Syntax Tree:\n{ast}\n-\tEval:\n{evaler(ast)}")
+    print(ast)
+    # print(f"-\tCode:\n{prog}\n-\tAbstract Syntax Tree:\n{ast}\n-\tEval:\n{evaler(ast)}")
