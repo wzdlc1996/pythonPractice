@@ -70,14 +70,29 @@ def _set(x):
     return x[1], {x[0]: x[1]}
 
 
+def _equal(x):
+    return int(x[0] == x[1]), {}
+
+
+class lazyFunction:
+    def __init__(self, param, body, known):
+        self.param = param
+        self.body = body
+        self.known = known
+
+    def __call__(self, rparam):
+        known = {x: v for x, v in zip(self.param, rparam)}
+        known.update(self.known)
+        return self.body.evaluate(known)
+
+
 BuiltInFunctions = {
     "Plus": _plus,
     "Minus": _minus,
     "Product": _product,
-    "If": _if,
     "List": _list,
     "Join": _join,
-    "Set": _set
+    "Equal": _equal
 }
 
 
@@ -194,6 +209,7 @@ class ASTree:
         fs.update(BuiltInFunctions)
         if knowledge is not None:
             fs.update(knowledge)
+        print(fs)
 
         # Special operation for some built-in functions
         if isinstance(self.data, int):
@@ -204,6 +220,20 @@ class ASTree:
             res, know = _set([varname, varval])
             know.update(kk)
             return res, know
+        elif self.data == "Def":
+            fname = self.children[0].data
+            vars = [self.children[1].data] + [x.data for x in self.children[1].children]
+            expr = self.children[2]
+            fbody = lazyFunction(vars, expr, fs)
+            v, k = 0, {fname: fbody}
+            fbody.known.update(k)
+            return v, k
+        elif self.data == "If":
+            check, kk = self.children[0].evaluate(fs)
+            ind = 1 if check else 2
+            res, known = self.children[ind].evaluate(fs)
+            known.update(kk)
+            return res, known
         else:
             param = []
             for x in self.children:
@@ -267,7 +297,8 @@ if __name__ == "__main__":
     # Problem: special treat for the first element in the program. This makes the head should be atom. Harmful for Lisp
     # property. To overcome this, do not use ASTree, use python.list instead. The iteratively evaluation would works as
     # a tree. So we do not make a tree explicitly.
-    prog = "(Join (List (If 1 (List 1 2 3) 0)))"
+    # prog = "(Join (List (If 1 (List 1 2 3) 0)))"
+    prog = "(Def f (x1 x2 x3) (Plus x1 x2))"
     ast = parser(prog)
     print(ast)
     # print(f"-\tCode:\n{prog}\n-\tAbstract Syntax Tree:\n{ast}\n-\tEval:\n{evaler(ast)}")
