@@ -33,15 +33,6 @@ def _product(x):
     return z, {}
 
 
-def _if(x):
-    if len(x) != 3:
-        raise BuiltinFunctionError(x, f"If accepts 3 parameters while {len(x)} is given.")
-    if x[0]:
-        return x[1], {}
-    else:
-        return x[2], {}
-
-
 # def _repeat(x):
 #     return [x[0]] * x[1], {}
 
@@ -209,7 +200,6 @@ class ASTree:
         fs.update(BuiltInFunctions)
         if knowledge is not None:
             fs.update(knowledge)
-        print(fs)
 
         # Special operation for some built-in functions
         if isinstance(self.data, int):
@@ -296,7 +286,7 @@ def evaler(ast, knowl=None):
 if __name__ == "__main__":
     # Problem: special treat for the first element in the program. This makes the head should be atom. Harmful for Lisp
     # property. To overcome this, do not use ASTree, use python.list instead. The iteratively evaluation would works as
-    # a tree. So we do not make a tree explicitly.
+    # a tree. So we do not need to make a tree explicitly.
     # prog = "(Join (List (If 1 (List 1 2 3) 0)))"
     prog = "(Def f (x1 x2 x3) (Plus x1 x2))"
     ast = parser(prog)
