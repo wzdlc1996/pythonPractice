@@ -57,26 +57,11 @@ def _join(x):
     return _list(z)
 
 
-def _set(x):
-    return x[1], {x[0]: x[1]}
-
-
 def _equal(x):
     return int(x[0] == x[1]), {}
 
 
-class lazyFunction:
-    def __init__(self, param, body, known):
-        self.param = param
-        self.body = body
-        self.known = known
-
-    def __call__(self, rparam):
-        known = {x: v for x, v in zip(self.param, rparam)}
-        known.update(self.known)
-        return self.body.evaluate(known)
-
-
+# All built-in functions return two variables: result and knowledge to update(usually empty as {})
 BuiltInFunctions = {
     "Plus": _plus,
     "Minus": _minus,
@@ -87,7 +72,25 @@ BuiltInFunctions = {
 }
 
 
-def isNumber(x):
+class lazyFunction:
+    def __init__(self, param, body, known):
+        self.param = param
+        self.body = body
+        # Make sure param variables local (not affected by global variables set previously)
+        self.known = {x: known[x] for x in known if x not in param}
+
+    def __call__(self, rparam):
+        known = {x: v for x, v in zip(self.param, rparam)}
+        known.update(self.known) # Make sure self.know would not be changed during function call
+        return self.body.evaluate(known)
+
+
+def isNumber(x: str) -> bool:
+    """
+    check whether the string is a number (integer) or not
+    :param x: string
+    :return bool: if int(x) works fine, return True
+    """
     return re.match("\d+$", x) is not None
 
 
@@ -96,6 +99,11 @@ def parseNumber(x):
 
 
 def atomParser(atom):
+    """
+    parse the atom expression
+    :param (str) atom: atom expression in the program
+    :return: a node of ASTree (by prefix notation)
+    """
     if isNumber(atom):
         z = parseNumber(atom)
     else:
@@ -104,6 +112,15 @@ def atomParser(atom):
 
 
 def bracketSubIntegrate(sub) -> str:
+    """
+    Integrating the input list with legal brackets
+    Example:
+        -  In: ["(", "Plus", "(", "Minus", "1", ")", "1", ")"]
+        -  Out: "(Plus (Minus 1) 1)"
+
+    :param (list) sub: splitted program
+    :return: integrated program (with legal brackets)
+    """
     x = ""
     for i, item in enumerate(sub):
         if item == "(":
@@ -216,7 +233,7 @@ class ASTree:
             expr = self.children[2]
             fbody = lazyFunction(vars, expr, fs)
             v, k = 0, {fname: fbody}
-            fbody.known.update(k)
+            fbody.known.update(k) # Make the function definition can call itself
             return v, k
         elif self.data == "If":
             check, kk = self.children[0].evaluate(fs)
