@@ -94,10 +94,11 @@ class rubik(object):
         acl = int(acl)
         edge = _faceRotMap[dir]
         dipair = list(edge.items())
-        temp = copy.deepcopy(self.face)
+        temp = [copy.copy(x) for x in self.face]  # use deepcopy would be 10 times slower
         for (d, i), (dp, ip) in zip(dipair, _listShift(dipair, (-1) ** (acl + 1))):
             for x, xp in zip(i, ip):
                 self.face[_iaxi[d]][x] = temp[_iaxi[dp]][xp]
+
         self._faceRot(_iaxi[dir], acl)
 
 
@@ -105,9 +106,13 @@ class rubik(object):
 
 if __name__ == "__main__":
     rb = rubik()
+    import time
     print(rb)
+    st = time.time()
     rb.rot("x", True)
+    ed = time.time()
     print(rb)
+    print(ed - st)
     rb.rot("y", False)
     print(rb)
 
