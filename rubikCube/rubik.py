@@ -43,6 +43,11 @@ _faceRotMap = {
 }
 
 
+action = [
+    (dire, aclo) for dire in _iaxi for aclo in [True, False]
+]
+
+
 def _listShift(lis: list, n: int) -> list:
     res = [0 for _ in range(len(lis))]
     for i in range(len(lis)):
@@ -56,6 +61,10 @@ def _shortColor(color: str) -> str:
 
 def _rendColor(i: int) -> str:
     return _shortColor(_color[i])
+
+
+def adjacentFaces(dir="x"):
+    return list(_faceRotMap[dir].keys())
 
 
 class rubik(object):
@@ -101,7 +110,21 @@ class rubik(object):
 
         self._faceRot(_iaxi[dir], acl)
 
+    def view(self, dir="x"):
+        res = {}
+        x = 0
+        for i in range(3):
+            for j in range(3):
+                res[(i-1, j-1)] = self.face[_iaxi[dir]][x]
+                x += 1
+        return res
 
+    def find(self, col: int):
+        res = []
+        for i, ax in _axis.items():
+            if col in self.face[i]:
+                res.append(ax)
+        return res
 
 
 if __name__ == "__main__":
@@ -109,11 +132,10 @@ if __name__ == "__main__":
     import time
     print(rb)
     st = time.time()
-    rb.rot("x", True)
+    rb.rot("-x", True)
     ed = time.time()
     print(rb)
     print(ed - st)
     rb.rot("y", False)
     print(rb)
-
 
