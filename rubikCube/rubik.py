@@ -126,16 +126,25 @@ class rubik(object):
                 res.append(ax)
         return res
 
+    def findInEdge(self, col: int):
+        res = []
+        for i, ax in _axis.items():
+            if col in self.face[i]:
+                vw = self.view(ax)
+                for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+                    if vw[x] == col:
+                        res.append((ax, x))
+        return res
+
+
+
+
 
 if __name__ == "__main__":
     rb = rubik()
-    import time
     print(rb)
-    st = time.time()
     rb.rot("-x", True)
-    ed = time.time()
     print(rb)
-    print(ed - st)
-    rb.rot("y", False)
-    print(rb)
+    print(rb.findInEdge(1))
+
 

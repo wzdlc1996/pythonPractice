@@ -1,3 +1,6 @@
+"""
+See https://www.youcandothecube.com/solve-it/3x3-solution for the algorithm
+"""
 import sys
 import os
 import numpy as np
@@ -106,6 +109,7 @@ def getAlong(dir, coord):
 def edgeMove(start, end):
     """
     Find the operation to move edge element from start to end, not preserving others.
+    TODO: make the operation preserve the end face cross
     :param start:
     :param end:
     :return:
@@ -139,14 +143,28 @@ def edgeMove(start, end):
     return oper
 
 
-
-
-
-
-
-
 def zCross():
     zcolor = cube.view("z")[(0, 0)]
+
+    def completeCross():
+        cls = [cube.view("z")[x] for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
+        x = True
+        for cl in cls:
+            x = x and (cl == zcolor)
+        return x
+    oper = []
+    while not completeCross():
+        zInEdge = cube.findInEdge(zcolor)
+        done = [x for x in zInEdge if x[0] == "z"]
+        tbd = [x for x in zInEdge if x[0] != "z"]
+        space = [x for x in [("z", y) for y in [(-1, 0), (0, 1), (1, 0), (0, -1)]] if x not in done]
+        pass
+
+
+
+
+
+
     
     
 if __name__ == '__main__':
