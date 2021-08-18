@@ -113,9 +113,15 @@ class rubik(object):
     def view(self, dir="x"):
         res = {}
         x = 0
-        for i in range(3):
-            for j in range(3):
-                res[(i-1, j-1)] = self.face[_iaxi[dir]][x]
+        # Note the relation between coordinate and index of self.face:
+        # The coordinate is arranged as (coord: index)
+        # (-1, 1): 0, (0, 1): 1, (1, 1): 2    | z
+        # (-1, 0): 3, (0, 0): 4, (1, 0): 5    |
+        # (-1,-1): 6, (0,-1): 7, (1,-1): 8    ------> y
+        # In the view of x direction.
+        for j in range(1, -2, -1):
+            for i in range(-1, 2, 1):
+                res[(i, j)] = self.face[_iaxi[dir]][x]
                 x += 1
         return res
 

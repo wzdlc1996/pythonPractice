@@ -90,7 +90,6 @@ def crs(d1, d2):
         return nd
 
 
-
 def getAlong(dir, coord):
     """
     Given face(dir) and coordinate, get the direction it indicates. like ("x", (0, 1)) should be "z"
@@ -118,6 +117,7 @@ def edgeMove(start, end):
     de, (ue, ve) = end
     oper = []
     if ds not in rb.adjacentFaces(de):
+        # Will not change the de face
         while us != ue or vs != ve:
             oper.append((ds, True))
             us, vs = coordRot((us, vs))
@@ -126,10 +126,20 @@ def edgeMove(start, end):
     else:
         dr = crs(ds, de)
 
+        # Rotate the target target to be along `ds`. Then the rotation of ds will not change the de face(cross)
+        while getAlong(de, (ue, ve)) != ds:
+            oper.append((de, True))
+            ue, ve = coordRot((ue, ve))
+
         # Find rotation to make the element along `dr`.
         while getAlong(ds, (us, vs)) != dr:
             oper.append((ds, True))
             us, vs = coordRot((us, vs))
+
+        # Then make the `de` target be along `dr`
+        while getAlong(de, (ue, ve)) != dr:
+            oper.append((de, True))
+            ue, ve = coordRot((ue, ve))
 
         # (ds, de, dr) forms a right-hand-frame, thus if `dr` is positive, the anti-clockwise rotation will move the
         # element along `dr` from `ds` to `de`; if `dr` is negative, the rotation should be clockwise.
@@ -148,6 +158,7 @@ def zCross():
 
     def completeCross():
         cls = [cube.view("z")[x] for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
+        print(cls)
         x = True
         for cl in cls:
             x = x and (cl == zcolor)
@@ -158,17 +169,18 @@ def zCross():
         done = [x for x in zInEdge if x[0] == "z"]
         tbd = [x for x in zInEdge if x[0] != "z"]
         space = [x for x in [("z", y) for y in [(-1, 0), (0, 1), (1, 0), (0, -1)]] if x not in done]
-        pass
+        s, e = tbd[0], space[0]
+        mvs = edgeMove(s, e)
+        for op in mvs:
+            cube.rot(*op)
+        oper.extend(mvs)
+        print(len(tbd))
 
-
-
-
-
-
-    
     
 if __name__ == '__main__':
-    print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
+    # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
+    zCross()
+    print(cube)
 
 
 
