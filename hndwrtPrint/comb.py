@@ -4,13 +4,15 @@ Combine the content and background
 import handWriting as hw
 import PIL
 import re
+import random
+
 
 gener = hw.char2imgFromFont()
 
 
 class artic:
     def __init__(self, filename="./content.md"):
-        with open(filename, "r") as f:
+        with open(filename, "r", encoding="utf8") as f:
             """
             self.main should be text list separated by the paragraph. The title is the first element
             """
@@ -36,8 +38,12 @@ class artic:
             lines += [list(para)[i:i+lineMaxCharNum] for i in range(0, len(para), lineMaxCharNum)]
         return lines
 
-    def splitPages(self, lineWid: int, lineNum: int, paraIndent=True) -> list:
-        lines = [list(self.main["title"]), [""]]
+    def splitPages(self, lineWid: int, lineNum: int, paraIndent=True, titleCent=True) -> list:
+        tit = list(self.main["title"])
+        if titleCent:
+            added = int((lineWid - len(tit)) / 2)
+            tit = ["  "] * added + tit + ["  "] * added
+        lines = [tit, [""]]
         for x in self.main["paras"]:
             if paraIndent:
                 para = "  " + x
@@ -47,6 +53,9 @@ class artic:
             lines += [list(para)[i:i+lineWid] for i in range(0, len(para), lineWid)]
         lines = [lines[i:i+lineNum] for i in range(0, len(lines), lineNum)]
         return lines
+
+    def getChars(self):
+        return self.charDict
 
 
 def charNumInEachLine(page_w, char_w, dw):

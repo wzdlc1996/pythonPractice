@@ -1,8 +1,13 @@
 """
 Map the chinese character to handwriting image
 """
-
+import re
 from PIL import ImageFont, Image, ImageDraw
+
+
+punc = {
+    "。": ".", "，": ",", "、": ",", "：": ":"
+}
 
 
 class char2imgFromFont:
@@ -22,6 +27,8 @@ class char2imgFromFont:
         font = ImageFont.truetype("./testfont.ttf", font_size)
         img = Image.new("RGBA", [strip_size, strip_size])
         dr = ImageDraw.Draw(img)
+        if char in punc:
+            char = punc[char]
         w, h = font.getsize(char)
         pos = [(strip_size - w) / 2, (strip_size - h) / 2]
         dr.text(pos, char, font=font, fill="black")
