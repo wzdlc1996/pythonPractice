@@ -158,7 +158,6 @@ def zCross():
 
     def completeCross():
         cls = [cube.view("z")[x] for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
-        print(cls)
         x = True
         for cl in cls:
             x = x and (cl == zcolor)
@@ -174,7 +173,6 @@ def zCross():
         for op in mvs:
             cube.rot(*op)
         oper.extend(mvs)
-        print(len(tbd))
 
     
 if __name__ == '__main__':
