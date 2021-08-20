@@ -108,7 +108,6 @@ def getAlong(dir, coord):
 def edgeMove(start, end):
     """
     Find the operation to move edge element from start to end, not preserving others.
-    TODO: make the operation preserve the end face cross
     :param start:
     :param end:
     :return:
@@ -173,6 +172,36 @@ def zCross():
         for op in mvs:
             cube.rot(*op)
         oper.extend(mvs)
+
+    # Make this z Cross be nice, i.e., the center color of (x, y, -x, -y) match the color at the edge between them and z
+    # face.
+    # When the z cross is formed, there are only two possible cases, 1) it is nice automatically, and 2) it is not nice
+    # but there are two disjoint faces violate the property. Then we need only find them and rot them twice, then rot z
+    # twice and rot them back, at last rot z twice to make it nice.
+    def isCrossNice():
+        centColors = [cube.view(x)[(0, 0)] for x in ["x", "y", "-x", "-y"]]
+        edgeColors = [cube.view(x)[(0, 1)] for x in ["x", "y", "-x", "-y"]]
+        return centColors == edgeColors
+
+    while cube.view("x")[(0, 0)] != cube.view("x")[(0, 1)]:
+        cube.rot("z", True)
+        oper.append(("z", True))
+
+    # This check can be optimized. But would not make much progress.
+    # if cube.view("y")[(0, 0)] == cube.view("y")[(0, 1)]:
+    if isCrossNice():
+        return oper
+    else:
+        ad = ([("y", True)] * 2 + [("-y", True)] * 2 + [("z", True)] * 2) * 2
+        for op in ad:
+            cube.rot(*op)
+        oper.extend(ad)
+        return oper
+
+
+def zCorner():
+    pass
+
 
     
 if __name__ == '__main__':
