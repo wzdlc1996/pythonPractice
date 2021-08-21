@@ -221,20 +221,25 @@ def zCross():
         return oper
 
 
+def isFootCorner(start):
+    d, (x, y) = start
+    try:
+        rb.adjacentCoord(start, "-z")
+        res = True
+    except ValueError:
+        res = False
+    return res
+
+
 def footCornerToZFace(start, end):
     ds, (us, vs) = start
     de, (ue, ve) = end
-
-    # Do nothing for illegal case
-    if ds in ["z", "-z"] or de != "z" or vs != -1 or (ue, ve) not in [(-1, 1), (-1, -1), (1, 1), (1, -1)]:
-        return []
 
     # Rot the "-z" face till (ds, (us, vs)) corner is behind the end corner
     oper = []
     while rb.adjacentCoord((ds, (us, vs)), "-z") != ("-z", (ue, ve)):
         oper.append(("-z", True))
         ds, (us, vs) = footRot(ds, (us, vs))
-        print(ds, (us, vs))
 
     # Two case handling
     footright = {"x": (1, -1), "y": (-1, -1), "-x": (-1, -1), "-y": (-1, 1)}
@@ -278,24 +283,69 @@ def headCornerToFoot(start):
     return oper, (dp, (xp, yp))
 
 
-
 def bottomCornerToFoot(start):
-    pass
+    d, (x, y) = start
+    oper = []
+    if (x, y) == (1, 1):
+        v = "y"
+        de = "-y"
+        xe, ye = -1, -1
+    elif (x, y) == (-1, 1):
+        v = "-x"
+        de = "x"
+        xe, ye = -1, -1
+    elif (x, y) == (-1, -1):
+        v = "-y"
+        de = "y"
+        xe, ye = -1, 1
+    else:
+        v = "x"
+        de = "-x"
+        xe, ye = 1, -1
+    oper.append((v, "-" not in v))
+    oper.append(("-z", True))
+    oper.append((v, "-" in v))
+    for op in oper:
+        cube.rot(*op)
+    return oper, (de, (xe, ye))
 
 
+def zFace():
+    zcolor = cube.view("z")[(0, 0)]
+    oper = zCross()
+    def completeZFace():
+        res = True
+        for _, c in cube.view("z").items():
+            res = res and (c == zcolor)
+        return res
 
+    while not completeZFace():
+        con = cube.findInCorner(zcolor)
+        spc = [("z", x) for x, c in cube.view("z").items() if c != zcolor]
+        tbd = [x for x in con if x[0] != "z"]
+        start = tbd[0]
+        end = spc[0]
+        if start[0] == "-z":
+            nop, start = bottomCornerToFoot(start)
+            nop += footCornerToZFace(start, end)
+            oper += nop
+        else:
+            if isFootCorner(start):
+                oper += footCornerToZFace(start, end)
+            else:
+                nop, start = headCornerToFoot(start)
+                oper += nop + footCornerToZFace(start, end)
 
-def zCorner():
-    pass
+    return oper
+
 
 
     
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
-    zCross()
+    print(zFace())
     print(cube)
-    print(headCornerToFoot(("x", (1, 1))))
-    print(cube)
+
 
 
 
