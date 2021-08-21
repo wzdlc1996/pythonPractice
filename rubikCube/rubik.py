@@ -63,8 +63,70 @@ def _rendColor(i: int) -> str:
     return _shortColor(_color[i])
 
 
+# Note the relation between coordinate and index of self.face:
+        # The coordinate is arranged as (coord: index)
+        # (-1, 1): 0, (0, 1): 1, (1, 1): 2    | z
+        # (-1, 0): 3, (0, 0): 4, (1, 0): 5    |
+        # (-1,-1): 6, (0,-1): 7, (1,-1): 8    ------> y
+        # In the view of x direction.
+_indToCoordMap = {}
+_coordToIndMap = {}
+x = 0
+for j in range(1, -2, -1):
+    for i in range(-1, 2, 1):
+        _coordToIndMap[(i, j)] = x
+        _indToCoordMap[x] = (i, j)
+        x += 1
+
+
+def _ind2coord(ind: int) -> tuple:
+    return _indToCoordMap[ind]
+
+def _coord2ind(coord: tuple) -> int:
+    return _coordToIndMap[coord]
+
+
+
 def adjacentFaces(dir="x"):
     return list(_faceRotMap[dir].keys())
+
+
+def adjacentCoord(start, endf):
+    sf, (x, y) = start
+    ef = endf
+    sind = _coord2ind((x, y))
+    if ef not in adjacentFaces(sf):
+        raise ValueError("The start face is not adjacent to the end face")
+
+    ads = [
+        [("x", "y"), ("y", "z"), ("z", "x")],
+        [("x", "-y"), ("y", "-z"), ("z", "-x")],
+        [("x", "-z"), ("y", "-x"), ("z", "-y")],
+        [("-y", "-z"), ("-z", "-x"), ("-x", "-y")]
+    ]
+    maps = [
+        {2: 2, 5: 1, 8: 0},
+        {0: 2, 3: 1, 6: 0},
+        {6: 8, 7: 5, 8: 2},
+        {0: 8, 3: 7, 6: 6}
+    ]
+
+    def revMap(map):
+        return {v: k for k, v in map.items()}
+
+    eind = None
+    for i in range(4):
+        if (sf, ef) in ads[i]:
+            mp = maps[i]
+        elif (ef, sf) in ads[i]:
+            mp = revMap(maps[i])
+        else:
+            continue
+        if sind in mp:
+            eind = mp[sind]
+    if eind is None:
+        raise ValueError("Cannot find adjacent, check parameters")
+    return ef, _ind2coord(eind)
 
 
 class rubik(object):
@@ -111,36 +173,46 @@ class rubik(object):
         self._faceRot(_iaxi[dir], acl)
 
     def view(self, dir="x"):
-        res = {}
-        x = 0
+        # res = {}
+        # x = 0
         # Note the relation between coordinate and index of self.face:
         # The coordinate is arranged as (coord: index)
         # (-1, 1): 0, (0, 1): 1, (1, 1): 2    | z
         # (-1, 0): 3, (0, 0): 4, (1, 0): 5    |
         # (-1,-1): 6, (0,-1): 7, (1,-1): 8    ------> y
         # In the view of x direction.
-        for j in range(1, -2, -1):
-            for i in range(-1, 2, 1):
-                res[(i, j)] = self.face[_iaxi[dir]][x]
-                x += 1
+        # for j in range(1, -2, -1):
+        #     for i in range(-1, 2, 1):
+        #         res[(i, j)] = self.face[_iaxi[dir]][x]
+        #         x += 1
+        # return res
+        global _coordToIndMap
+        res = {}
+        for (i, j), x in _coordToIndMap.items():
+            res[(i, j)] = self.face[_iaxi[dir]][x]
         return res
 
     def find(self, col: int):
         res = []
         for i, ax in _axis.items():
-            if col in self.face[i]:
-                res.append(ax)
+            for coord, color in self.view(ax).items():
+                if col == color:
+                    res.append((ax, coord))
         return res
 
     def findInEdge(self, col: int):
-        res = []
-        for i, ax in _axis.items():
-            if col in self.face[i]:
-                vw = self.view(ax)
-                for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
-                    if vw[x] == col:
-                        res.append((ax, x))
-        return res
+        return [(ax, coord) for (ax, coord) in self.find(col) if coord in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
+        # res = []
+        # for i, ax in _axis.items():
+        #     if col in self.face[i]:
+        #         vw = self.view(ax)
+        #         for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+        #             if vw[x] == col:
+        #                 res.append((ax, x))
+        # return res
+
+    def findInCorner(self, col: int):
+        return [(ax, coord) for (ax, coord) in self.find(col) if coord in [(-1, 1), (1, 1), (-1, -1), (1, -1)]]
 
 
 
@@ -152,5 +224,6 @@ if __name__ == "__main__":
     rb.rot("-x", True)
     print(rb)
     print(rb.findInEdge(1))
+    print(adjacentCoord(("x", (-1, -1)), "-z"))
 
 

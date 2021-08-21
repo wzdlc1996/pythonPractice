@@ -33,6 +33,28 @@ def coordRot(cord, acl=True):
     return tuple(r.dot(list(cord)))
 
 
+def footRot(d, coord, acl=True):
+    """
+    map for foot (z = -1) in x-y part by -z face rotation
+    :param d:
+    :param coord:
+    :return:
+    """
+    rmap = {
+        ("x", (-1, -1)): ("y", (-1, 1)),
+        ("y", (-1, 1)): ("-x", (1, -1)),
+        ("-x", (1, -1)): ("-y", (-1, -1)),
+        ("-y", (-1, -1)): ("x", (-1, -1)),
+        ("x", (1, -1)): ("y", (-1, -1)),
+        ("y", (-1, -1)): ("-x", (-1, -1)),
+        ("-x", (-1, -1)): ("-y", (-1, 1)),
+        ("-y", (-1, 1)): ("x", (1, -1))
+    }
+    if not acl:
+        rmap = {v: k for k, v in rmap.items()}
+    return rmap[(d, coord)]
+
+
 def vec(dir):
     """
     vectorize the direction, like "x" or "-x" return "x"
@@ -107,7 +129,7 @@ def getAlong(dir, coord):
 
 def edgeMove(start, end):
     """
-    Find the operation to move edge element from start to end, not preserving others.
+    Find the operation to move edge element from start to end, preserving others.
     :param start:
     :param end:
     :return:
@@ -199,6 +221,70 @@ def zCross():
         return oper
 
 
+def footCornerToZFace(start, end):
+    ds, (us, vs) = start
+    de, (ue, ve) = end
+
+    # Do nothing for illegal case
+    if ds in ["z", "-z"] or de != "z" or vs != -1 or (ue, ve) not in [(-1, 1), (-1, -1), (1, 1), (1, -1)]:
+        return []
+
+    # Rot the "-z" face till (ds, (us, vs)) corner is behind the end corner
+    oper = []
+    while rb.adjacentCoord((ds, (us, vs)), "-z") != ("-z", (ue, ve)):
+        oper.append(("-z", True))
+        ds, (us, vs) = footRot(ds, (us, vs))
+        print(ds, (us, vs))
+
+    # Two case handling
+    footright = {"x": (1, -1), "y": (-1, -1), "-x": (-1, -1), "-y": (-1, 1)}
+    footleft = {"x": (-1, -1), "y": (-1, 1), "-x": (1, -1), "-y": (-1, -1)}
+    if (us, vs) == footleft[ds]:
+        v = crs(ds, de)
+        oper.append(("-z", True))
+        oper.append((v, "-" in v))
+        oper.append(("-z", False))
+        oper.append((v, "-" not in v))
+    else:
+        v = crs(de, ds)
+        oper.append(("-z", False))
+        oper.append((v, "-" not in v))
+        oper.append(("-z", True))
+        oper.append((v, "-" in v))
+    for op in oper:
+        cube.rot(*op)
+    return oper
+
+
+def headCornerToFoot(start):
+    headleft = {"x": (-1, 1), "y": (1, 1), "-x": (1, 1), "-y": (1, -1)}
+    d, (x, y) = start
+    dp, (xp, yp) = start
+    oper = []
+    if (x, y) == headleft[d]:
+        oper.append((d, "-" not in d))
+        xp, yp = coordRot((xp, yp), True)
+        oper.append(("-z", True))
+        dp, (xp, yp) = footRot(dp, (xp, yp), False)
+        oper.append((d, "-" in d))
+    else:
+        oper.append((d, "-" in d))
+        xp, yp = coordRot((xp, yp), False)
+        oper.append(("-z", False))
+        dp, (xp, yp) = footRot(dp, (xp, yp), True)
+        oper.append((d, "-" not in d))
+    for op in oper:
+        cube.rot(*op)
+    return oper, (dp, (xp, yp))
+
+
+
+def bottomCornerToFoot(start):
+    pass
+
+
+
+
 def zCorner():
     pass
 
@@ -207,6 +293,8 @@ def zCorner():
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
     zCross()
+    print(cube)
+    print(headCornerToFoot(("x", (1, 1))))
     print(cube)
 
 
