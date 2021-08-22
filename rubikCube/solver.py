@@ -10,15 +10,6 @@ random.seed(0)
 sys.path.append(os.path.realpath(__file__ + "/../"))
 import rubik as rb
 
-cube = rb.rubik()
-
-# Scrambling
-for i in range(100):
-    act = random.choice(rb.action)
-    cube.rot(*act)
-
-print(cube)
-
 
 def coordRot(cord, acl=True):
     """
@@ -174,53 +165,6 @@ def edgeMove(start, end):
     return oper
 
 
-def zCross():
-    zcolor = cube.view("z")[(0, 0)]
-
-    def completeCross():
-        cls = [cube.view("z")[x] for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
-        x = True
-        for cl in cls:
-            x = x and (cl == zcolor)
-        return x
-    oper = []
-    while not completeCross():
-        zInEdge = cube.findInEdge(zcolor)
-        done = [x for x in zInEdge if x[0] == "z"]
-        tbd = [x for x in zInEdge if x[0] != "z"]
-        space = [x for x in [("z", y) for y in [(-1, 0), (0, 1), (1, 0), (0, -1)]] if x not in done]
-        s, e = tbd[0], space[0]
-        mvs = edgeMove(s, e)
-        for op in mvs:
-            cube.rot(*op)
-        oper.extend(mvs)
-
-    # Make this z Cross be nice, i.e., the center color of (x, y, -x, -y) match the color at the edge between them and z
-    # face.
-    # When the z cross is formed, there are only two possible cases, 1) it is nice automatically, and 2) it is not nice
-    # but there are two disjoint faces violate the property. Then we need only find them and rot them twice, then rot z
-    # twice and rot them back, at last rot z twice to make it nice.
-    def isCrossNice():
-        centColors = [cube.view(x)[(0, 0)] for x in ["x", "y", "-x", "-y"]]
-        edgeColors = [cube.view(x)[(0, 1)] for x in ["x", "y", "-x", "-y"]]
-        return centColors == edgeColors
-
-    while cube.view("x")[(0, 0)] != cube.view("x")[(0, 1)]:
-        cube.rot("z", True)
-        oper.append(("z", True))
-
-    # This check can be optimized. But would not make much progress.
-    # if cube.view("y")[(0, 0)] == cube.view("y")[(0, 1)]:
-    if isCrossNice():
-        return oper
-    else:
-        ad = ([("y", True)] * 2 + [("-y", True)] * 2 + [("z", True)] * 2) * 2
-        for op in ad:
-            cube.rot(*op)
-        oper.extend(ad)
-        return oper
-
-
 def isFootCorner(start):
     d, (x, y) = start
     try:
@@ -231,7 +175,32 @@ def isFootCorner(start):
     return res
 
 
-def footCornerToZFace(start, end):
+def isFootLeft(start):
+    d, (x, y) = start
+    footleft = {"x": (-1, -1), "y": (-1, 1), "-x": (1, -1), "-y": (-1, -1)}
+    return (x, y) == footleft[d]
+
+
+def footCornerToZFace(start):
+    ds, (us, vs) = start
+    _, (ue, ve) = rb.adjacentCoord(start, "-z")
+    oper = []
+    if isFootLeft((ds, (us, vs))):
+        v = crs(ds, "z")
+        oper.append(("-z", True))
+        oper.append((v, "-" in v))
+        oper.append(("-z", False))
+        oper.append((v, "-" not in v))
+    else:
+        v = crs("z", ds)
+        oper.append(("-z", False))
+        oper.append((v, "-" not in v))
+        oper.append(("-z", True))
+        oper.append((v, "-" in v))
+    return oper, ("z", (ue, ve))
+
+
+def legacy_footCornerToZFace(start, end):
     ds, (us, vs) = start
     de, (ue, ve) = end
 
@@ -242,9 +211,9 @@ def footCornerToZFace(start, end):
         ds, (us, vs) = footRot(ds, (us, vs))
 
     # Two case handling
-    footright = {"x": (1, -1), "y": (-1, -1), "-x": (-1, -1), "-y": (-1, 1)}
-    footleft = {"x": (-1, -1), "y": (-1, 1), "-x": (1, -1), "-y": (-1, -1)}
-    if (us, vs) == footleft[ds]:
+    # footright = {"x": (1, -1), "y": (-1, -1), "-x": (-1, -1), "-y": (-1, 1)}
+    # footleft = {"x": (-1, -1), "y": (-1, 1), "-x": (1, -1), "-y": (-1, -1)}
+    if isFootLeft((ds, (us, vs))):
         v = crs(ds, de)
         oper.append(("-z", True))
         oper.append((v, "-" in v))
@@ -278,8 +247,6 @@ def headCornerToFoot(start):
         oper.append(("-z", False))
         dp, (xp, yp) = footRot(dp, (xp, yp), True)
         oper.append((d, "-" not in d))
-    for op in oper:
-        cube.rot(*op)
     return oper, (dp, (xp, yp))
 
 
@@ -305,46 +272,119 @@ def bottomCornerToFoot(start):
     oper.append((v, "-" not in v))
     oper.append(("-z", True))
     oper.append((v, "-" in v))
-    for op in oper:
-        cube.rot(*op)
     return oper, (de, (xe, ye))
 
 
-def zFace():
-    zcolor = cube.view("z")[(0, 0)]
-    oper = zCross()
-    def completeZFace():
-        res = True
-        for _, c in cube.view("z").items():
-            res = res and (c == zcolor)
-        return res
+class RubikSolver:
+    def __init__(self):
+        self.cube = rb.rubik()
+        self.oper = []
 
-    while not completeZFace():
-        con = cube.findInCorner(zcolor)
-        spc = [("z", x) for x, c in cube.view("z").items() if c != zcolor]
-        tbd = [x for x in con if x[0] != "z"]
-        start = tbd[0]
-        end = spc[0]
-        if start[0] == "-z":
-            nop, start = bottomCornerToFoot(start)
-            nop += footCornerToZFace(start, end)
-            oper += nop
-        else:
-            if isFootCorner(start):
-                oper += footCornerToZFace(start, end)
-            else:
+    def _scrambling(self):
+        for i in range(100):
+            act = random.choice(rb.action)
+            self.cube.rot(*act)
+
+    def __str__(self):
+        return self.cube.__str__()
+
+    def _actSingleOper(self, op):
+        self.oper.append(op)
+        self.cube.rot(*op)
+
+    def _actOpers(self, oper):
+        for op in oper:
+            self._actSingleOper(op)
+
+    def _zCross(self):
+        cube = self.cube
+        zcolor = cube.view("z")[(0, 0)]
+
+        def completeCross():
+            cls = [cube.view("z")[x] for x in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
+            x = True
+            for cl in cls:
+                x = x and (cl == zcolor)
+            return x
+
+        while not completeCross():
+            zInEdge = cube.findInEdge(zcolor)
+            done = [x for x in zInEdge if x[0] == "z"]
+            tbd = [x for x in zInEdge if x[0] != "z"]
+            space = [x for x in [("z", y) for y in [(-1, 0), (0, 1), (1, 0), (0, -1)]] if x not in done]
+            s, e = tbd[0], space[0]
+            mvs = edgeMove(s, e)
+            self._actOpers(mvs)
+
+        # Make this z Cross be nice, i.e., the center color of (x, y, -x, -y) match the color at the edge between them
+        # and z face.
+        # When the z cross is formed, there are only two possible cases, 1) it is nice automatically, and 2) it is not
+        # nice but there are two disjoint faces violate the property. Then we need only find them and rot them twice,
+        # then rot z twice and rot them back, at last rot z twice to make it nice.
+        def isCrossNice():
+            centColors = [cube.view(x)[(0, 0)] for x in ["x", "y", "-x", "-y"]]
+            edgeColors = [cube.view(x)[(0, 1)] for x in ["x", "y", "-x", "-y"]]
+            return centColors == edgeColors
+
+        while cube.view("x")[(0, 0)] != cube.view("x")[(0, 1)]:
+            self._actSingleOper(("z", True))
+
+        # This check can be optimized. But would not make much progress.
+        # if cube.view("y")[(0, 0)] == cube.view("y")[(0, 1)]:
+        if not isCrossNice():
+            ad = ([("y", True)] * 2 + [("-y", True)] * 2 + [("z", True)] * 2) * 2
+            self._actOpers(ad)
+
+    def _zFace(self):
+        cube = self.cube
+        # TODO: make the z face nice: top layer should be solved
+        zcolor = cube.view("z")[(0, 0)]
+
+        def completeZFace():
+            res = True
+            for _, c in cube.view("z").items():
+                res = res and (c == zcolor)
+            return res
+
+        while not completeZFace():
+            con = cube.findInCorner(zcolor)
+            spc = [("z", x) for x, c in cube.view("z").items() if c != zcolor]
+            tbd = [x for x in con if x[0] != "z"]
+            start = tbd[0]
+            end = spc[0]
+            if start[0] == "-z":
+                nop, start = bottomCornerToFoot(start)
+            elif not isFootCorner(start):
                 nop, start = headCornerToFoot(start)
-                oper += nop + footCornerToZFace(start, end)
+            else:
+                nop, start = [], start
 
-    return oper
+            self.oper += nop
+            while cube.view("-z")[rb.adjacentCoord(start, "-z")[1]] != cube.view(start[0])[(0, 0)]:
+                start = footRot(*start)
+                self._actSingleOper(("-z", True))
 
+            #oper += footCornerToZFace(start, ("z", start[1]))
 
+            # if start[0] == "-z":
+            #     nop, start = bottomCornerToFoot(start)
+            #     nop += footCornerToZFace(start, end)
+            #     oper += nop
+            # else:
+            #     if isFootCorner(start):
+            #         oper += footCornerToZFace(start, end)
+            #     else:
+            #         nop, start = headCornerToFoot(start)
+            #         oper += nop + footCornerToZFace(start, end)
 
     
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
-    print(zFace())
-    print(cube)
+    prob = RubikSolver()
+    prob._scrambling()
+    print(prob)
+    prob._zCross()
+    print(prob)
 
 
 
