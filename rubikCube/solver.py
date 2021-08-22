@@ -5,6 +5,7 @@ import sys
 import os
 import numpy as np
 import random
+import time
 random.seed(0)
 
 sys.path.append(os.path.realpath(__file__ + "/../"))
@@ -182,6 +183,13 @@ def isFootLeft(start):
 
 
 def footCornerToZFace(start):
+    """
+    Move the foot corner to z-face. for example. ("x", (-1, -1)), will be move to ("z", (1, -1)).
+    This function is used to solve the top corner such that the top layer is match
+    Do not affect other corner
+    :param start:
+    :return:
+    """
     ds, (us, vs) = start
     _, (ue, ve) = rb.adjacentCoord(start, "-z")
     oper = []
@@ -225,32 +233,42 @@ def legacy_footCornerToZFace(start, end):
         oper.append((v, "-" not in v))
         oper.append(("-z", True))
         oper.append((v, "-" in v))
-    for op in oper:
-        cube.rot(*op)
+    # for op in oper:
+    #     cube.rot(*op)
     return oper
 
 
 def headCornerToFoot(start):
+    """
+    Move the head corner (top layer) to foot. Do not affect other corner
+    :param start:
+    :return:
+    """
     headleft = {"x": (-1, 1), "y": (1, 1), "-x": (1, 1), "-y": (1, -1)}
     d, (x, y) = start
     dp, (xp, yp) = start
     oper = []
     if (x, y) == headleft[d]:
         oper.append((d, "-" not in d))
-        xp, yp = coordRot((xp, yp), True)
-        oper.append(("-z", True))
+        xp, yp = coordRot((xp, yp), "-" not in d)
+        oper.append(("-z", False))
         dp, (xp, yp) = footRot(dp, (xp, yp), False)
         oper.append((d, "-" in d))
     else:
         oper.append((d, "-" in d))
-        xp, yp = coordRot((xp, yp), False)
-        oper.append(("-z", False))
+        xp, yp = coordRot((xp, yp), "-" in d)
+        oper.append(("-z", True))
         dp, (xp, yp) = footRot(dp, (xp, yp), True)
         oper.append((d, "-" not in d))
     return oper, (dp, (xp, yp))
 
 
 def bottomCornerToFoot(start):
+    """
+    Move the bottom corner (-z face) to foot. Do not affect other corner
+    :param start:
+    :return:
+    """
     d, (x, y) = start
     oper = []
     if (x, y) == (1, 1):
@@ -271,6 +289,37 @@ def bottomCornerToFoot(start):
         xe, ye = 1, -1
     oper.append((v, "-" not in v))
     oper.append(("-z", True))
+    oper.append((v, "-" in v))
+    return oper, (de, (xe, ye))
+
+
+def topCornerToFoot(start):
+    """
+    Move the top corner (z face) to foot, to resolve the mismatch z face corner.
+    Like bottomCornerToFoot, but it initially at z face. Do not affect other corner
+    :param start:
+    :return:
+    """
+    d, (x, y) = start
+    oper = []
+    if (x, y) == (1, 1):
+        v = "y"
+        de = "-y"
+        xe, ye = -1, 1
+    elif (x, y) == (-1, 1):
+        v = "-x"
+        de = "x"
+        xe, ye = 1, -1
+    elif (x, y) == (-1, -1):
+        v = "-y"
+        de = "y"
+        xe, ye = -1, -1
+    else:
+        v = "x"
+        de = "-x"
+        xe, ye = 1, -1
+    oper.append((v, "-" not in v))
+    oper.append(("-z", False))
     oper.append((v, "-" in v))
     return oper, (de, (xe, ye))
 
@@ -336,8 +385,11 @@ class RubikSolver:
             self._actOpers(ad)
 
     def _zFace(self):
+        """
+        Complete the z face and top layer
+        :return:
+        """
         cube = self.cube
-        # TODO: make the z face nice: top layer should be solved
         zcolor = cube.view("z")[(0, 0)]
 
         def completeZFace():
@@ -346,44 +398,51 @@ class RubikSolver:
                 res = res and (c == zcolor)
             return res
 
+        def isZCornerSolved(start):
+            d, (x, y) = start
+            if (x, y) == (-1, -1):
+                u, v = "-x", "-y"
+            elif (x, y) == (1, -1):
+                u, v = "-y", "x"
+            elif (x, y) == (1, 1):
+                u, v = "x", "y"
+            else:
+                u, v = "y", "-x"
+            _, uc = rb.adjacentCoord(start, u)
+            _, vc = rb.adjacentCoord(start, v)
+            return (cube.view(u)[(0, 0)] == cube.view(u)[uc]) and (cube.view(v)[(0, 0)] == cube.view(v)[vc])
+
         while not completeZFace():
-            con = cube.findInCorner(zcolor)
-            spc = [("z", x) for x, c in cube.view("z").items() if c != zcolor]
-            tbd = [x for x in con if x[0] != "z"]
-            start = tbd[0]
-            end = spc[0]
-            if start[0] == "-z":
+            start = [x for x in cube.findInCorner(zcolor) if x[0] != "z" or not isZCornerSolved(x)][0]
+            if start[0] == "z":
+                nop, start = topCornerToFoot(start)
+            elif start[0] == "-z":
                 nop, start = bottomCornerToFoot(start)
             elif not isFootCorner(start):
                 nop, start = headCornerToFoot(start)
             else:
                 nop, start = [], start
+            self._actOpers(nop)
 
-            self.oper += nop
+
             while cube.view("-z")[rb.adjacentCoord(start, "-z")[1]] != cube.view(start[0])[(0, 0)]:
                 start = footRot(*start)
                 self._actSingleOper(("-z", True))
 
-            #oper += footCornerToZFace(start, ("z", start[1]))
 
-            # if start[0] == "-z":
-            #     nop, start = bottomCornerToFoot(start)
-            #     nop += footCornerToZFace(start, end)
-            #     oper += nop
-            # else:
-            #     if isFootCorner(start):
-            #         oper += footCornerToZFace(start, end)
-            #     else:
-            #         nop, start = headCornerToFoot(start)
-            #         oper += nop + footCornerToZFace(start, end)
+            _, ce = rb.adjacentCoord(start, "-z")
+            nop, _ = footCornerToZFace(start)
+            self._actOpers(nop)
 
     
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
     prob = RubikSolver()
     prob._scrambling()
-    print(prob)
+    # print(prob)
     prob._zCross()
+    print(prob)
+    prob._zFace()
     print(prob)
 
 
