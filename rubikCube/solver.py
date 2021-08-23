@@ -6,7 +6,7 @@ import os
 import numpy as np
 import random
 import time
-random.seed(0)
+random.seed()
 
 sys.path.append(os.path.realpath(__file__ + "/../"))
 import rubik as rb
@@ -218,11 +218,6 @@ def edgeMove(start, end):
         while getAlong(ds, (us, vs)) != dr:
             oper.append((ds, True))
             us, vs = coordRot((us, vs))
-
-        # Rotate the target target to be along `ds`. Then the rotation of ds will not change the de face(cross)
-        while getAlong(de, (ue, ve)) != ds:
-            oper.append((de, True))
-            ue, ve = coordRot((ue, ve))
 
         # Then make the `de` target be along `dr`
         while getAlong(de, (ue, ve)) != dr:
