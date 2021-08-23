@@ -86,7 +86,6 @@ def _coord2ind(coord: tuple) -> int:
     return _coordToIndMap[coord]
 
 
-
 def adjacentFaces(dir="x"):
     return list(_faceRotMap[dir].keys())
 
@@ -162,6 +161,13 @@ class rubik(object):
             self.face[dir][v[i]] = temp[v[(i + 2 * (-1) ** (acl + 1)) % len(v)]]
 
     def rot(self, dir="x", acl=True):
+        """
+        Implement a rotation at given face (by dir), anti-clockwise (by acl)
+        Note for "-x", "-y", "-z", acl=True makes a clockwise rotation. (anti-clockwise along the x, y, z, axis)
+        :param dir:
+        :param acl:
+        :return:
+        """
         acl = int(acl)
         edge = _faceRotMap[dir]
         dipair = list(edge.items())
@@ -191,6 +197,9 @@ class rubik(object):
         for (i, j), x in _coordToIndMap.items():
             res[(i, j)] = self.face[_iaxi[dir]][x]
         return res
+
+    def getFaceColor(self, fac):
+        return _iaxi[fac]
 
     def find(self, col: int):
         res = []
