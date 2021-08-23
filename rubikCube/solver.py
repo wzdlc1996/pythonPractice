@@ -6,7 +6,7 @@ import os
 import numpy as np
 import random
 import time
-random.seed(204)
+random.seed(0)
 
 sys.path.append(os.path.realpath(__file__ + "/../"))
 import rubik as rb
@@ -45,6 +45,47 @@ def antiClockRotAtFace(dir):
 
 def clockRotAtFace(dir):
     return dir, "-" in dir
+
+
+def readable(oper):
+    """
+    return readable operations.
+    i.e.,
+        (xyz, True) -> Anti at `xyz`
+        (-xyz, True) -> Clock at `-xyz`
+        (xyz, False) -> Clock at `xyz`
+        (-xyz, False) -> Anti at `-xyz`
+    :param oper:
+    :return:
+    """
+    face, acl = oper
+    mod = ("-" in face) != acl
+    if mod:
+        return f"Clock at {face}"
+    else:
+        return f"Anti at {face}"
+
+
+def operSimplify(oper):
+    def seqreduc(oper, tim):
+        if tim % 4 == 0:
+            return []
+        elif tim % 4 == 1:
+            return [oper]
+        elif tim % 4 == 3:
+            return [(oper[0], not oper[1])]
+        else:
+            return [oper] * 2
+    simp = []
+    temp = []
+    for x in oper:
+        if len(temp) == 0 or x == temp[-1]:
+            temp.append(x)
+        else:
+            simp.extend(seqreduc(temp[0], len(temp)))
+            simp.append(x)
+            temp = []
+    return simp
 
 
 def footRot(d, coord, acl=True):
@@ -664,12 +705,16 @@ class RubikSolver:
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
 
-    for i in range(300):
-        prob = RubikSolver()
-        # random.seed(i)
-        prob._scrambling()
-        prob.solve()
-        print(f"{i} done")
+    prob = RubikSolver()
+    prob._scrambling()
+    print(prob)
+    a = prob.solve()
+    print(f"solve in {len(a)} opers")
+    print(f"solve in {len(operSimplify(a))} opers (reduced)")
+    print(prob)
+    for x in reversed(operSimplify(a)):
+        prob.cube.rot(x[0], not x[1])
+    print(prob)
 
 
 
