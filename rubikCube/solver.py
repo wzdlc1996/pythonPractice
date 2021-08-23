@@ -383,7 +383,7 @@ def topCornerToFoot(start):
     else:
         v = "x"
         de = "-x"
-        xe, ye = 1, -1
+        xe, ye = -1, -1
     # oper.append((v, "-" not in v))
     # oper.append(("-z", False))
     # oper.append((v, "-" in v))
@@ -592,13 +592,7 @@ class RubikSolver:
                 nop, start = [], start
             self._actOpers(nop)
 
-            print(self)
-            input("aa  ")
             # Rot the (-z face) to make the start at the right place to implement footCornerToZFace.
-            print(cube.getFaceColor(start[0]))
-            print(cube.view("-z")[rb.adjacentCoord(start, "-z")[1]])
-            print(cube.view(start[0])[start[1]])
-            print(zcolor)
             while cube.view("-z")[rb.adjacentCoord(start, "-z")[1]] != cube.getFaceColor(start[0]):
                 start = footRot(*start)
                 self._actSingleOper(("-z", True))
@@ -669,22 +663,13 @@ class RubikSolver:
     
 if __name__ == '__main__':
     # print(edgeMove(("x", (-1, 0)), ("-z", (-1, 0))))
-    prob = RubikSolver()
-    prob.cube.face = [[2, 0, 3, 4, 0, 4, 2, 1, 4], [2, 3, 1, 4, 1, 1, 5, 5, 4], [0, 2, 5, 2, 2, 2, 4, 2, 1], [3, 3, 5, 0, 3, 3, 2, 0, 0], [3, 5, 3, 5, 4, 4, 1, 1, 5], [1, 0, 0, 5, 5, 3, 0, 1, 4]]
-    prob._zFace()
-    print(prob)
-    # for i in range(63, 64):
-    #     random.seed(i)
-    #     prob._scrambling()
-    #     prob._zCross()
-    #     prob._zFace()
-    #
-    # print(prob)
-    # random.seed(64)
-    # prob._scrambling()
-    # prob._zCross()
-    # print(prob)
-    # print(prob.cube.face)
+
+    for i in range(300):
+        prob = RubikSolver()
+        # random.seed(i)
+        prob._scrambling()
+        prob.solve()
+        print(f"{i} done")
 
 
 
