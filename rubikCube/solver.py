@@ -529,9 +529,8 @@ def midMoveToCorrect(start, cube: rb.rubik):
 # )
 def genPatt(cube, mod=0):
     """
-    TODO: side error when mod != 0
-    Generate the -z face pattern of cube. This function leaves cube invariant. mod specifies the "f" face. 0 to "y", 1
-    to "-x", 2 to "-y", 3 to "x"
+    Generate the -z face pattern of cube. This function leaves cube NOT change. mod specifies the "f" face. 0 to "y", 1
+    to "-x", 2 to "-y", 3 to "x". This actually make a clockwise rot on -z and look.
     :param cube:
     :param mod:
     :return:
@@ -540,7 +539,7 @@ def genPatt(cube, mod=0):
     sidef = {"f": "y", "r": "x", "l": "-x", "b": "-y", "u": "-z", "d": "z"}
     pattv = cube.view("-z")
     def pattViewRot(zf):
-        return {coordRot(cord, True): val for cord, val in zf.items()}
+        return {coordRot(cord, False): val for cord, val in zf.items()}
     for _ in range(mod):
         pattv = pattViewRot(pattv)
         for sd in ["l", "r", "b", "f"]:
@@ -560,7 +559,19 @@ def genPatt(cube, mod=0):
         if relaf in ["l", "r", "f", "b"]:
             cords = sideedge[realf]
             sidev[relaf] = [cube.view(realf)[rb.adjacentCoord(("-z", x), realf)[1]] for x in cords]
-    return facev, sidev
+    return facev, sidev, sidef
+
+
+def pattMatch(patt, refp):
+    fv, sv = patt
+    fvr, svr = refp
+    res = True
+    for x, y in zip(fv, fvr):
+        res = res and ((y is None) or (x == y))
+    for k in sv.keys():
+        for x, y in zip(sv[k], svr[k]):
+            res = res and ((y is None) or (x == y))
+    return res
 
 
 def zFacePatternMatch(cube, patt):
@@ -763,9 +774,9 @@ if __name__ == '__main__':
     # for x in reversed(operSimplify(a)):
     #     prob.cube.rot(x[0], not x[1])
     # print(prob)
-    f, s = genPatt(prob.cube, mod=1)
-    print([rb._color[x] for x in f])
-    print({x: [rb._color[z] for z in y] for x, y in s.items()})
+    f, s, _ = genPatt(prob.cube, mod=0)
+    r = f.copy()
+    print(pattMatch((f,s), ([None] * len(f), s)))
 
 
 
