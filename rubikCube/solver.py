@@ -293,7 +293,7 @@ def footCornerToZFace(start):
     return oper, ("z", (ue, ve))
 
 
-def legacy_footCornerToZFace(start, end):
+def _legacy_footCornerToZFace(start, end):
     ds, (us, vs) = start
     de, (ue, ve) = end
 
@@ -517,6 +517,59 @@ def midMoveToCorrect(start, cube: rb.rubik):
         return []
 
 
+# This part we handle the last -z face. The information is the pattern as a tuple as
+# (
+#   -z face view, (list, indexing as
+#                    back
+#                   0, 1, 2
+#             left  3, 4, 5  right
+#                   6, 7, 8
+#                    front
+#   side face view, (dict, as {"f": [from left to right], "r": [...], ...}. )
+# )
+def genPatt(cube, mod=0):
+    """
+    TODO: side error when mod != 0
+    Generate the -z face pattern of cube. This function leaves cube invariant. mod specifies the "f" face. 0 to "y", 1
+    to "-x", 2 to "-y", 3 to "x"
+    :param cube:
+    :param mod:
+    :return:
+    """
+    sidemap = {"x": "y", "y": "-x", "-x": "-y", "-y": "x", "z": "z", "-z": "-z"}
+    sidef = {"f": "y", "r": "x", "l": "-x", "b": "-y", "u": "-z", "d": "z"}
+    pattv = cube.view("-z")
+    def pattViewRot(zf):
+        return {coordRot(cord, True): val for cord, val in zf.items()}
+    for _ in range(mod):
+        pattv = pattViewRot(pattv)
+        for sd in ["l", "r", "b", "f"]:
+            sidef[sd] = sidemap[sidef[sd]]
+    facev = []
+    for j in range(-1, 2, 1):
+        for i in range(-1, 2, 1):
+            facev.append(pattv[(i, j)])
+    sidev = {}
+    sideedge = {
+        "x": [(1, 1), (1, 0), (1, -1)],
+        "y": [(-1, 1), (0, 1), (1, 1)],
+        "-y": [(1, -1), (0, -1), (-1, -1)],
+        "-x": [(-1, -1), (-1, 0), (-1, 1)]
+    }
+    for relaf, realf in sidef.items():
+        if relaf in ["l", "r", "f", "b"]:
+            cords = sideedge[realf]
+            sidev[relaf] = [cube.view(realf)[rb.adjacentCoord(("-z", x), realf)[1]] for x in cords]
+    return facev, sidev
+
+
+def zFacePatternMatch(cube, patt):
+
+    for _ in range(4):
+        pass
+
+
+
 class RubikSolver:
     def __init__(self):
         self.cube = rb.rubik()
@@ -703,13 +756,16 @@ if __name__ == '__main__':
     prob = RubikSolver()
     prob._scrambling()
     print(prob)
-    a = prob.solve()
-    print(f"solve in {len(a)} opers")
-    print(f"solve in {len(operSimplify(a))} opers (reduced)")
-    print(prob)
-    for x in reversed(operSimplify(a)):
-        prob.cube.rot(x[0], not x[1])
-    print(prob)
+    # a = prob.solve()
+    # print(f"solve in {len(a)} opers")
+    # print(f"solve in {len(operSimplify(a))} opers (reduced)")
+    # print(prob)
+    # for x in reversed(operSimplify(a)):
+    #     prob.cube.rot(x[0], not x[1])
+    # print(prob)
+    f, s = genPatt(prob.cube, mod=1)
+    print([rb._color[x] for x in f])
+    print({x: [rb._color[z] for z in y] for x, y in s.items()})
 
 
 
