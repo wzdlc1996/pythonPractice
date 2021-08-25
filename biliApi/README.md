@@ -96,4 +96,44 @@ const playurl_by_custom = new BilibiliApi({
 })
 ```
 
-因此我们要做的就是为服务器 (或者云函数) 实现正确返回 `result` 的功能. 
+因此我们要做的就是为服务器 (或者云函数) 实现正确返回 `result` 的功能. 事实上, 我们希望它起到代理服务器的功能. 
+
+## 基于 Flask 的代理服务实现
+
+我们要做的只有一个, 当获取到对 `proxyHost/playurl?args` 的请求时, 我们让服务器返回对 `api.bilibili.com/pgc/player/web/playurl?args`
+请求的结果即可. 从而起到核心功能的 Flask 组件为
+
+```python
+from flask import request, Response
+import requests as rq
+
+def proxyGet():
+    host = "https://api.bilibili.com/pgc/player/web/playurl"
+    preHeaders = dict(request.headers)
+
+    exclude_in_headers = ["host", "Host", "X-Forwarded-For", "x-forwarded-for"]
+    in_head = {k: v for k, v in preHeaders.items() if k not in exclude_in_headers}
+    in_head["Referer"] = "https://api.bilibili.com"
+    r = rq.request(request.method, url=f"{host}?{url_encode(request.args)}", headers=in_head)
+
+    exclude_out_headers = []
+    postHeaders = r.raw.headers.items()
+    out_headers = {k: v for k, v in postHeaders if k not in exclude_out_headers}
+    res = Response(r.content, status=r.status_code, headers=out_headers)
+    return res
+```
+
+代理服务分为两步:
+
+1.  从传入请求中获取参数, url, header的信息, 并且将其进行预处理, 更改 `host` 之后使用 requests.request 获取.
+2.  将获取到的 header 和内容整合构造 `Response` 对相并返回. 
+
+其中最重要的是将 `requests.request` 的完整信息返回给调用者. 即我们不能只返回内容的 json 格式数据, 而必须保留 header.
+
+## 部署在腾讯云函数服务上
+
+1.  申请腾讯云的账号
+2.  新建函数实例
+3.  部署并获取接口url
+4.  将接口填入代理服务器(注意routine). 参见 [解除b站区域限制](https://github.com/ipcjs/bilibili-helper)
+
