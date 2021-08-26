@@ -559,7 +559,7 @@ def genPatt(cube, mod=0):
         if relaf in ["l", "r", "f", "b"]:
             cords = sideedge[realf]
             sidev[relaf] = [cube.view(realf)[rb.adjacentCoord(("-z", x), realf)[1]] for x in cords]
-    return facev, sidev, sidef
+    return (facev, sidev), sidef
 
 
 def pattMatch(patt, refp):
@@ -574,10 +574,41 @@ def pattMatch(patt, refp):
     return res
 
 
-def zFacePatternMatch(cube, patt):
+def zFacePatternMatch(cube, patts):
+    """
+    Match any -z face pattern. Note the former patts is privileged.
+    :param cube:
+    :param patts:
+    :return:
+    """
+    for x in patts:
+        for mod in range(4):
+            pat, sidf = genPatt(cube, mod)
+            if pattMatch(pat, x):
+                return sidf
+    return None
 
-    for _ in range(4):
-        pass
+
+def zFacePatternMatchFull(cube, patts):
+    sets = []
+    for x in patts:
+        for mod in range(4):
+            pat, sidf = genPatt(cube, mod)
+            if pattMatch(pat, x):
+                sets.append(sidf)
+    return sets
+
+
+def zFacePatternMatchPartial(cube, patts):
+    sets = {}
+    for x, prev in patts:
+        for mod in range(4):
+            pat, sidf = genPatt(cube, mod)
+            if pattMatch(pat, x):
+                if prev not in sets:
+                    sets[prev] = []
+                sets[prev].append(sidf)
+    return sets[max(sets.keys())]
 
 
 
@@ -607,6 +638,12 @@ class RubikSolver:
     def _actOpers(self, oper):
         for op in oper:
             self._actSingleOper(op)
+
+    def _rewind(self, operlen):
+        for _ in range(operlen):
+            op = self.oper.pop()
+            op = (op[0], not op[1])
+            self.cube.rot(*op)
 
     def _zCross(self):
         cube = self.cube
@@ -758,6 +795,215 @@ class RubikSolver:
 
             self._actOpers(midMoveToCorrect(opt[0], cube))
 
+    def _finlay_simp_tree_search(self, refgen, opergen, complete):
+        """
+        Possibly optimization, use a smarter way to handle the search.
+        Naive tree search is quite slow with a lot of useless steps
+        :param refgen:
+        :param opergen:
+        :param complete:
+        :return:
+        """
+        opers = []  # operation stack
+        forbid = []  # forbid configuration
+        path = []  # is the list of configuration
+        def looptrap(path):
+            """
+            Check whether the path is trapped in a loop
+            :param path:
+            :return:
+            """
+            return path[-1] in path[:-1]
+            # return path[-1][0] in [x[0] for x in path[:-1]]
+
+        while not complete():
+
+            # Begin the traverse of all possible operations (with respect to possible rel-faces (pattMatchFull))
+            refs = refgen(self.cube)
+            for (i, ref) in enumerate(refs):
+
+                # If the configuration should be forbid, skip this ref
+                if len(path) != 0 and (self.cube.__str__(), i) in forbid:
+
+                    # If all refs should be skip, then this means the current state is bad. We should rewind the
+                    # procedure and add the last configuration to forbid
+                    if i == len(refs) - 1:
+                        self._rewind(len(opers.pop()))  # rewind by pop the operation stack
+                        forbid.append(path.pop())  # add the bad configuration to forbid
+                        break  # quit the travers
+                    continue  # skip the current ref
+
+                # If the ref is available, do this next and push the operation to operation stack
+                oper = opergen(ref)
+                path.append((self.cube.__str__(), i))  # update path
+                opers.append(oper)  # add to stack
+                self._actOpers(oper)  # implement the operation
+
+                # Check whether the current path is loop or not. If it is a loop, pop and add to forbid
+                if looptrap(path):
+                    # Forbid the entire loop chain, will significantly shorten the operation length.
+                    for i in range(len(path) - 1):
+                        if path[-1] == path[-2-i]:
+                            break
+                    for _ in range(i):
+                        self._rewind(len(opers.pop()))
+                        forbid.append(path.pop())
+                    continue
+                else:
+                    break
+
+
+    def _finlay_cross(self):
+        """
+        Subroutine for finlay solving. Make a cross first by FURU'R'F'
+        :param self:
+        :return:
+        """
+        mzColor = self.cube.getFaceColor("-z")
+        def complete():
+            res = self.cube.view("-z")
+            return all([res[x] == mzColor for x in [(-1, 0), (1, 0), (0, 1), (0, -1)]])
+
+        def genFaceOnlyPattRef(ind):
+            return (
+                [(None if i not in ind else mzColor) for i in range(9)],
+                {
+                    "f": [None] * 3,
+                    "b": [None] * 3,
+                    "r": [None] * 3,
+                    "l": [None] * 3
+                }
+            )
+        self._finlay_simp_tree_search(
+            lambda x: zFacePatternMatchFull(self.cube, [
+                genFaceOnlyPattRef([1, 3, 4]),
+                genFaceOnlyPattRef([3, 4, 5]),
+                genFaceOnlyPattRef([4])
+            ]),
+            lambda rel: [
+                clockRotAtFace(rel["f"]),
+                clockRotAtFace(rel["u"]),
+                clockRotAtFace(rel["r"]),
+                antiClockRotAtFace(rel["u"]),
+                antiClockRotAtFace(rel["r"]),
+                antiClockRotAtFace(rel["f"])
+            ],
+            complete
+        )
+        # while not complete():
+        #     rel = zFacePatternMatch(self.cube, [
+        #         genFaceOnlyPattRef([1, 3, 4]),
+        #         genFaceOnlyPattRef([3, 4, 5]),
+        #         genFaceOnlyPattRef([4])
+        #     ])
+        #     assert rel is not None
+        #     self._actOpers([
+        #         clockRotAtFace(rel["f"]),
+        #         clockRotAtFace(rel["u"]),
+        #         clockRotAtFace(rel["r"]),
+        #         antiClockRotAtFace(rel["u"]),
+        #         antiClockRotAtFace(rel["r"]),
+        #         antiClockRotAtFace(rel["f"])
+        #     ])
+
+    def _finlay_face(self):
+        mzColor = self.cube.getFaceColor("-z")
+        def complete():
+            res = self.cube.view("-z")
+            return all([x == mzColor for x in res.values()])
+
+        def genSparsePatt(faceind, serfsp):
+            base = (
+                [(None if i not in faceind else mzColor) for i in range(9)],
+                {
+                    "f": [None] * 3,
+                    "b": [None] * 3,
+                    "r": [None] * 3,
+                    "l": [None] * 3
+                }
+            )
+            for x, v in serfsp.items():
+                for ind in v:
+                    base[1][x][ind] = mzColor
+            return base
+
+        self._finlay_simp_tree_search(
+            # lambda x: zFacePatternMatchFull(x, [
+            #     genSparsePatt(
+            #         [0, 1, 2, 3, 4, 5, 7],
+            #         {"f": [0]}
+            #     ),
+            #     genSparsePatt(
+            #         [0, 1, 3, 4, 5, 7, 8],
+            #         {"f": [0]}
+            #     ),
+            #     genSparsePatt(
+            #         [1, 2, 3, 4, 5, 7, 8],
+            #         {"f": [0]}
+            #     ),
+            #     genSparsePatt(
+            #         [1, 3, 4, 5, 7],
+            #         {"l": [2]}
+            #     ),
+            #     genSparsePatt(
+            #         [1, 3, 4, 5, 6, 7],
+            #         {}
+            #     )
+            # ]),
+            lambda x: zFacePatternMatchPartial(x, [
+                (genSparsePatt(
+                    [0, 1, 2, 3, 4, 5, 7],
+                    {"f": [0]}
+                ), 2),
+                (genSparsePatt(
+                    [0, 1, 3, 4, 5, 7, 8],
+                    {"f": [0]}
+                ), 2),
+                (genSparsePatt(
+                    [1, 2, 3, 4, 5, 7, 8],
+                    {"f": [0]}
+                ), 2),
+                (genSparsePatt(
+                    [1, 3, 4, 5, 7],
+                    {"l": [2]}
+                ), 2),
+                (genSparsePatt(
+                    [1, 3, 4, 5, 6, 7],
+                    {}
+                ), 2)
+            ]),
+            lambda rel: [
+                clockRotAtFace(rel["r"]),
+                clockRotAtFace(rel["u"]),
+                antiClockRotAtFace(rel["r"]),
+                clockRotAtFace(rel["u"]),
+                clockRotAtFace(rel["r"]),
+                clockRotAtFace(rel["u"]),
+                clockRotAtFace(rel["u"]),
+                antiClockRotAtFace(rel["r"])
+            ],
+            complete
+        )
+
+    def _finlay_corner(self):
+        def corner_match():
+            res = False
+            matchf = []
+            for adjf, coord in zip([("-x", "-y"), ("x", "y"), ("x", "-y"), ("-x", "y")], [(-1, -1), (1, 1), (1, -1), (-1, 1)]):
+                for f in adjf:
+                    fcol = self.cube.getFaceColor(f)
+                    acol = self.cube.view(f)[rb.adjacentCoord(("-z", coord), f)[1]]
+                    if fcol == acol:
+                        res = True
+                        matchf.append(f)
+            return res, matchf
+        return corner_match()
+
+
+
+
+
+
 
 
     
@@ -773,10 +1019,19 @@ if __name__ == '__main__':
     # print(prob)
     # for x in reversed(operSimplify(a)):
     #     prob.cube.rot(x[0], not x[1])
-    # print(prob)
-    f, s, _ = genPatt(prob.cube, mod=0)
-    r = f.copy()
-    print(pattMatch((f,s), ([None] * len(f), s)))
+    prob.solve()
+
+    prob._finlay_cross()
+    x = len(prob.oper)
+    prob._finlay_face()
+    print(prob)
+    print(len(prob.oper) - x)
+
+    # print(prob._finlay_corner())
+
+
+    # print(zFacePatternMatch(prob.cube, [([3, 3] + [None] * 7, {x: [None]*3 for x in ["l", "r", "f", "b"]})]))
+    # print(f, s)
 
 
 

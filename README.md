@@ -10,6 +10,7 @@
 6.  Phys. Rev. Research 影响因子估计: `./prrStat`
 7.  简易的 Lisp 解释器 `./pyLisp`
 8.  3阶魔方辅助程序
+9.  使用腾讯云函数反代解除bilibili锁区 `./biliApi`
 
 
 <!--
