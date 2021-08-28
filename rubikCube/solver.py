@@ -613,6 +613,9 @@ def zFacePatternMatchPartial(cube, patts):
 
 
 class RubikSolver:
+    """
+    TODO: rearrange private functions and readin interface
+    """
     def __init__(self):
         self.cube = rb.rubik()
         self.oper = []
@@ -713,7 +716,11 @@ class RubikSolver:
             _, vc = rb.adjacentCoord(start, v)
             return (cube.getFaceColor(u) == cube.view(u)[uc]) and (cube.getFaceColor(v) == cube.view(v)[vc])
 
-        while not completeZFace():
+        def complete():
+            zf = completeZFace()
+            return zf and all([isZCornerSolved(("z", (x, y))) for x, y in [(-1, -1), (-1, 1), (1, -1), (1, 1)]])
+
+        while not complete():
 
             # Find the start as unsolved corner
             start = [x for x in cube.findInCorner(zcolor) if x[0] != "z" or not isZCornerSolved(x)][0]
@@ -987,17 +994,129 @@ class RubikSolver:
 
     def _finlay_corner(self):
         def corner_match():
-            res = False
+            matchs = []
             matchf = []
             for adjf, coord in zip([("-x", "-y"), ("x", "y"), ("x", "-y"), ("-x", "y")], [(-1, -1), (1, 1), (1, -1), (-1, 1)]):
+                temp = []
                 for f in adjf:
                     fcol = self.cube.getFaceColor(f)
-                    acol = self.cube.view(f)[rb.adjacentCoord(("-z", coord), f)[1]]
+                    corn = rb.adjacentCoord(("-z", coord), f)
+                    acol = self.cube.view(f)[corn[1]]
                     if fcol == acol:
-                        res = True
-                        matchf.append(f)
-            return res, matchf
-        return corner_match()
+                        matchs.append(corn)
+                        temp.append(f)
+                # matchf stores the pair or single face notations by the matching. If match f contains all possible
+                # adjf (with length 4, all elements length 2), then corner solved. If len(matchf) is 2 and the matched
+                # faces are overlapped, i.e., adjacent corners. Else it should be diagonal corner.
+                if temp != []:
+                    matchf.append(temp)
+            return matchs, matchf
+        def genRelFaces():
+            while True:
+                cor, fac = corner_match()
+                if len(cor) >= 4:
+                    break
+                self._actSingleOper(("-z", True))
+            if len(fac) == 4 and min([len(x) for x in fac]) == 2:
+                return None
+            else:
+                if len(fac) == 2:
+                    a, b = fac
+                    inters = [x for x in a if x in b]
+                    if len(inters) != 0:
+                        return {
+                            "u": "-z",
+                            "d": "z",
+                            "l": crs("-z", inters[0]),
+                            "r": crs("z", inters[0]),
+                            "f": neg(inters[0]),
+                            "b": inters[0]
+                        }
+            # Then it should be diagonal case
+            while True:
+                cor, fac = corner_match()
+                if ["x", "-y"] in fac or (["x"] in fac and ["-y"] in fac):
+                    return {"u": "-z", "d": "z", "l": "y", "r": "-y", "f": "x", "b": "-x"}
+                self._actSingleOper(("-z", True))
+
+        while genRelFaces() is not None:
+            relf = genRelFaces()
+            self._actOpers([
+                antiClockRotAtFace(relf["r"]),
+                clockRotAtFace(relf["f"]),
+                antiClockRotAtFace(relf["r"]),
+                clockRotAtFace(relf["b"]),
+                clockRotAtFace(relf["b"]),
+                clockRotAtFace(relf["r"]),
+                antiClockRotAtFace(relf["f"]),
+                antiClockRotAtFace(relf["r"]),
+                clockRotAtFace(relf["b"]),
+                clockRotAtFace(relf["b"]),
+                clockRotAtFace(relf["r"]),
+                clockRotAtFace(relf["r"]),
+                antiClockRotAtFace(relf["u"])
+            ])
+
+    def _finlay_edge(self):
+        def findSolved():
+            for f in ["x", "y", "-x", "-y"]:
+                fcol = self.cube.getFaceColor(f)
+                if all([x == fcol for x in self.cube.view(f).values()]):
+                    return f
+
+        def complete():
+            res = True
+            for f in ["x", "y", "-x", "-y"]:
+                fcol = self.cube.getFaceColor(f)
+                res = res and all([x == fcol for x in self.cube.view(f).values()])
+            return res
+
+        while not complete():
+
+            back = findSolved()
+            if back is None:
+                back = "-x"
+            relf = {
+                "u": "-z",
+                "d": "z",
+                "f": neg(back),
+                "b": back,
+                "l": crs(back, "z"),
+                "r": crs(back, "-z")
+            }
+            # Get the front edge color
+            col = None
+            for x in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                if getAlong(relf["f"], x) == relf["u"]:
+                    col = self.cube.view(relf["f"])[x]
+            if col == self.cube.getFaceColor(relf["l"]):
+                # If it is the same to left face
+                fu = clockRotAtFace
+            else:
+                fu = antiClockRotAtFace
+            self._actOpers([
+                clockRotAtFace(relf["f"]),
+                clockRotAtFace(relf["f"]),
+                fu(relf["u"]),
+                clockRotAtFace(relf["l"]),
+                antiClockRotAtFace(relf["r"]),
+                clockRotAtFace(relf["f"]),
+                clockRotAtFace(relf["f"]),
+                antiClockRotAtFace(relf["l"]),
+                clockRotAtFace(relf["r"]),
+                fu(relf["u"]),
+                clockRotAtFace(relf["f"]),
+                clockRotAtFace(relf["f"])
+            ])
+
+    def _finlay(self):
+        self._finlay_cross()
+        self._finlay_face()
+        self._finlay_corner()
+        self._finlay_edge()
+
+
+
 
 
 
@@ -1022,10 +1141,11 @@ if __name__ == '__main__':
     prob.solve()
 
     prob._finlay_cross()
-    x = len(prob.oper)
     prob._finlay_face()
+    prob._finlay_corner()
+    prob._finlay_edge()
     print(prob)
-    print(len(prob.oper) - x)
+    print(f"solved in {len(prob.oper)} rots")
 
     # print(prob._finlay_corner())
 
