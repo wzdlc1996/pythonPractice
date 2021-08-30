@@ -2,6 +2,7 @@
 Map the chinese character to handwriting image
 """
 import re
+import random
 from PIL import ImageFont, Image, ImageDraw
 
 
@@ -11,9 +12,14 @@ punc = {
 
 
 class char2imgFromFont:
-    def __init__(self, strip_size=50, font_size=35):
-        self.strip_size = strip_size
+    def __init__(self, widCent=40, widRang=5, height=50, font_size=35):
+        self.h = height
+        self.wc = widCent
+        self.wr = widRang
         self.font_size = font_size
+
+    def genSize(self):
+        return int(self.wc + self.wr * 2 * (random.random() - 0.5)), self.h
 
     def __call__(self, char):
         """
@@ -23,23 +29,22 @@ class char2imgFromFont:
         :return: img object from Image.new(...)
         """
         font_size = self.font_size
-        strip_size = self.strip_size
+        w, h = self.genSize()
         font = ImageFont.truetype("./testfont.ttf", font_size)
-        img = Image.new("RGBA", [strip_size, strip_size])
+        img = Image.new("RGBA", [w, h])
         dr = ImageDraw.Draw(img)
         if char in punc:
             char = punc[char]
-        w, h = font.getsize(char)
-        pos = [(strip_size - w) / 2, (strip_size - h) / 2]
+        rw, rh = font.getsize(char)
+        pos = [(w - rw) / 2, (h - rh) / 2]
         dr.text(pos, char, font=font, fill="black")
-        return img
-
-    def getSize(self):
-        return self.strip_size, self.strip_size
+        return img, (w, h)
 
 
 if __name__ == "__main__":
     gen = char2imgFromFont()
-    img = gen("啊")
+    img, (w, h) = gen(",")
     img.save("./temp.png")
+
+
 
