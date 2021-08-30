@@ -21,15 +21,25 @@ class char2imgFromFont:
     def genSize(self):
         return int(self.wc + self.wr * 2 * (random.random() - 0.5)), self.h
 
-    def __call__(self, char):
+    def getHeight(self):
+        return self.h
+
+    def getWidth(self):
+        return self.wc
+
+    def __call__(self, char, sizer=None):
         """
         Convert the character to the img with transparent background
 
         :param char: Character, including chinese
+        :param sizer: tuple of int for size, as (w, h)
         :return: img object from Image.new(...)
         """
         font_size = self.font_size
-        w, h = self.genSize()
+        if sizer is None:
+            w, h = self.genSize()
+        else:
+            w, h = sizer
         font = ImageFont.truetype("./testfont.ttf", font_size)
         img = Image.new("RGBA", [w, h])
         dr = ImageDraw.Draw(img)
@@ -43,7 +53,7 @@ class char2imgFromFont:
 
 if __name__ == "__main__":
     gen = char2imgFromFont()
-    img, (w, h) = gen(",")
+    img, (w, h) = gen("  a")
     img.save("./temp.png")
 
 
