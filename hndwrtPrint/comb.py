@@ -8,6 +8,8 @@ import random
 
 
 gener = hw.char2imgFromFont()
+A4size = (210, 297)
+A4hwratio = 297 / 210
 
 
 def _genImgsForChars(chars, gen=gener):
@@ -92,6 +94,16 @@ class artic:
         self.paraNum = len(self.main["paras"])
         self.bkpt = [0, 0]
 
+    def make(self, boxSize, dSize, pageOffSet=None):
+        res = []
+        i = 0
+        while self.bkpt[0] < self.paraNum and len(res) < 10:
+            iniPage = i == 0
+            print(self.bkpt)
+            res.append(self.makePage(boxSize=boxSize, dSize=dSize, iniPage=iniPage, pageOffSet=pageOffSet))
+            i += 1
+        return res
+
     def makePage(self, boxSize, dSize, iniPage=True, pageOffSet=None):
         pw, ph = boxSize
         dw, dh = dSize
@@ -105,7 +117,7 @@ class artic:
         x, y = resetPos()
 
         # Gen empty image
-        img = PIL.Image.new("RGBA", boxSize, "white")
+        img = PIL.Image.new("RGBA", boxSize, None)
         if iniPage:
             self.bkpt = [0, 0]
             titleLen = (len(self.main["title"]) - 1) * dw + sum([x["width"] for x in self.char["title"]])
@@ -146,21 +158,32 @@ class artic:
         return img
 
 
+def loadBackGround(filename=None):
+    if filename is None:
+        filename = "./background/pku_background.png"
+    img = PIL.Image.open(filename)
+    img = img.convert("RGBA")
+    # w, h = img.size
+    # color = img.getpixel((0, 0))
+    # for ih in range(h):
+    #     for iw in range(w):
+    #         dot = (iw, ih)
+    #         tcol = img.getpixel(dot)
+    #         if tcol == color:
+    #             img.putpixel(dot, tcol[:-1] + (0,))
+    return img
 
 
+def intBackGround(page, bk, pos):
+    size = bk.size
+    abspos = (int(size[0] * pos[0]), int(size[1] * pos[1]))
+    img = bk.copy()
+    img.paste(page, abspos, page)
+    return img
 
 
-
-
-
-
-
-
-
-
-
-
-
+def A4sizer(wid):
+    return wid, int(wid * A4hwratio)
 
 
 
@@ -223,7 +246,11 @@ def charNumInEachLine(page_w, char_w, dw):
 
 if __name__ == "__main__":
     atc = artic()
-    page = atc.makePage((1000, 1600), (10, 10))
-    page.save("./temp.png")
+    a = loadBackGround()
+    page = atc.makePage((650, 930), (-5, -5))
+    res = intBackGround(page, a, (0.12, 0.15))
+    res.save("./temp.png")
+
+
 
 
