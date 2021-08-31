@@ -77,7 +77,8 @@ class artic:
             self.main should be text list separated by the paragraph. The title is the first element
             """
             self.main_proto = f.readlines()
-            self.main_proto = [x[:-1] for x in self.main_proto if x != "\n"]
+            # Delete empty line and remove all space
+            self.main_proto = [x[:-1].replace(" ", "") for x in self.main_proto if x != "\n"]
 
         self.gen = gen
         self.charHeight = self.gen.getHeight()

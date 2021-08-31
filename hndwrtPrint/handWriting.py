@@ -44,6 +44,8 @@ class char2imgFromFont:
         img = Image.new("RGBA", [w, h])
         dr = ImageDraw.Draw(img)
         if char in punc:
+            # make punctuation width be half of letter.
+            w = int(0.5 * w)
             char = punc[char]
         rw, rh = font.getsize(char)
         pos = [(w - rw) / 2, (h - rh) / 2]
