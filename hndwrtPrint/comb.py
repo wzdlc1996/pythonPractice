@@ -187,7 +187,6 @@ def A4sizer(wid):
     return wid, int(wid * A4hwratio)
 
 
-
 def charNumInEachLine(page_w, char_w, dw):
     return int((page_w + dw) / (char_w + dw))
 
