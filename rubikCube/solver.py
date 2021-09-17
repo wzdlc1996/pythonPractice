@@ -994,6 +994,12 @@ class RubikSolver:
 
     def _finlay_corner(self):
         def corner_match():
+            """
+            find the matched face for corners, i.e., the element in the "-z" edge's corners whose color is the same as
+            the color of ["x", "y", "-x", "-y"]
+            :return　matchs: matched position, list of (face, coord)
+            :return matchf: matched faces, list of "x..."
+            """
             matchs = []
             matchf = []
             for adjf, coord in zip([("-x", "-y"), ("x", "y"), ("x", "-y"), ("-x", "y")], [(-1, -1), (1, 1), (1, -1), (-1, 1)]):
