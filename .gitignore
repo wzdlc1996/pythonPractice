@@ -15,7 +15,8 @@ genEPUB/book.epub
 hndwrtPrint/test
 
 
-
+# combineImages
+combineImages/font.ttf
 
 # C extensions
 *.so
