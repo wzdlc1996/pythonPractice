@@ -1,4 +1,4 @@
-from linRegress import LinRegress
+from linRegress import LinRegress, _L2_LSESolver
 import numpy as np
 
 # Test linear model with error by norm distribution
@@ -10,12 +10,14 @@ X1 = np.linspace(0., 10., 100)
 X2 = np.linspace(0., 1., 100)
 
 # X-Value by combination of the variables
-X = np.array([[x1, x2] for x1 in X1 for x2 in X2])
+# X = np.array([[x1, x2] for x1 in X1 for x2 in X2])
+X = np.array([[x1, x2] for x1, x2 in zip(X1, X2)])
 # Y-Value
 Y = np.array([lin_mod(x) for x in X])
 
 # Calling the Linear Regression
-linsq = LinRegress(X, Y)
+linsq = LinRegress(X, Y, lazy=True)
+linsq.solve(_L2_LSESolver(0.1, 0.1, 0.1))
 
 # Print the report
 print(linsq.report())

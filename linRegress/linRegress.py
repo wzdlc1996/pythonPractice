@@ -37,9 +37,13 @@ class LinRegress:
         self.solve()
 
 
-    def solve(self):
+    def solve(self, solver=None):
         # Solve the Least Square Estimation
-        self.coef, self.residule, self.invCoefMat = _LSESolve(self.X, self.ydata)
+        if solver is None:
+            lseSolv = _LSESolve
+        else:
+            lseSolv = solver
+        self.coef, self.residule, self.invCoefMat = lseSolv(self.X, self.ydata)
         self.sigma = np.sum(self.residule ** 2) / (self.dataLen - self.deg - 1)
 
         ymean = np.average(self.ydata)
@@ -79,6 +83,27 @@ def _LSESolve(X: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray, Any):
     mat = np.linalg.inv(X.T.dot(X))
     a = mat.dot(X.T.dot(y))
     return a, X.dot(a) - y, mat
+
+
+def _L2_LSESolver(*args):
+    """
+    Make a solver for LSE with L2 regularization
+
+    :param args:
+    :return:
+    """
+    def lseSolv(X: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray, Any):
+        _, siz = X.shape
+        penal = np.zeros((siz, siz))  # Make the shape is the same to X.T.dot(X)
+        for i in range(len(args)):
+            if i >= siz:
+                break
+            penal[i, i] = args[i]
+        mat = np.linalg.inv(X.T.dot(X) + penal)
+        a = mat.dot(X.T.dot(y))
+        return a, X.dot(a) - y, mat
+
+    return lseSolv
 
 
 
