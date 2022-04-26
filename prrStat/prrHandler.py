@@ -106,10 +106,11 @@ if __name__ == "__main__":
     import os
     import progressbar as psb
 
+    # Note here, if prr_pubs in current dir, it would not be updated
     if "prr_pubs" not in os.listdir():
         lis = getPapers()
         with open("./prr_pubs", "w") as f:
-            json.dump(lis, f)
+            json.dump(lis, f, indent="\t")
     else:
         with open("./prr_pubs", "r") as f:
             lis = json.load(f)
@@ -118,4 +119,4 @@ if __name__ == "__main__":
         citings = queryCitingList(item["identifier"])
         item["cited-by"] = citings
     with open("./prr_pubs_full", "w") as f:
-        json.dump(lis, f)
+        json.dump(lis, f, indent="\t")
