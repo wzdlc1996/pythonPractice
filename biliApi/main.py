@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, render_template, request, url_for, send_from_directory, Response
+from flask import Flask, request, Response, make_response
 import requests as rq
 from werkzeug.utils import secure_filename
 from werkzeug.urls import url_encode
@@ -23,7 +23,15 @@ def proxyGet():
     exclude_out_headers = []
     postHeaders = r.raw.headers.items()
     out_headers = {k: v for k, v in postHeaders if k not in exclude_out_headers}
-    res = Response(r.content, status=r.status_code, headers=out_headers)
+    # res = Response(r.content, status=r.status_code, headers=out_headers)
+    # return res
+    
+    # use make_response. 
+    res = make_response(r.content)
+    # If preserve all headers would lead to timeout, do not know the reason yet, might be the problem of bilibili.
+    res.headers['Content-Type'] = 'application/json'
+    # print(res.headers)
+    res.status_code = r.status_code
     return res
 
 # 启动服务，监听 9000 端口，监听地址为 0.0.0.0
