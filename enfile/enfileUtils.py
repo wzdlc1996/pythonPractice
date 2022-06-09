@@ -1,9 +1,11 @@
 import os
 import os.path as path
-from io import BytesIO
-
+import platform
 import shutil
-from typing import Callable, Tuple
+
+from io import BytesIO
+from typing import Callable
+
 import rarfile
 import zipfile
 import pyzipper
@@ -16,6 +18,15 @@ from msoffcrypto import exceptions as msexcept
 # Global Variables
 PASSED_DIR_NAME = "success"
 FAILED_DIR_NAME = "failed"
+
+if os.system("whereis unrar") != 0:
+    if platform.system() in ['Darwin']:
+        rarfile.UNRAR_TOOL = "./unrar"
+    elif platform.system() in ['Windows', 'windows', 'win32']:
+        rarfile.UNRAR_TOOL = "./UnRAR.exe"
+    else:
+        print("There is no suitable unrar tool in system!")
+        exit(1)
 
 
 def getPasswordList(filename: str) -> list:

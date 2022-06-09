@@ -39,3 +39,4 @@ enfile/unrar
 enfile/UnRAR.exe
 enfile/rarfile.py
 enfile/*.spec
+enfile/test
