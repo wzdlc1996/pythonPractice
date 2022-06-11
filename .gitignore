@@ -36,7 +36,7 @@ betaVAE/data_gen
 
 # enfile
 enfile/unrar
-enfile/UnRAR.exe
+enfile/unrar.exe
 enfile/rarfile.py
 enfile/*.spec
 enfile/test

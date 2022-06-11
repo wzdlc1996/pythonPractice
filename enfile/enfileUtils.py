@@ -9,7 +9,8 @@ from typing import Callable, Tuple
 import rarfile
 import zipfile
 import pyzipper
-import PyPDF2
+# import PyPDF2
+import pikepdf
 
 import msoffcrypto as ms
 from msoffcrypto import exceptions as msexcept
@@ -345,7 +346,48 @@ def func_rar(file: str, passwords: list, tar_dir: str) -> bool:
     """
     return func_archive(ArchiveInterface(file), passwords, tar_dir)
 
-        
+
+# Removing. PyPDF2 does not support current used encryption algorithm.
+# see issue https://github.com/py-pdf/PyPDF2/issues/378
+#
+# def func_pdf_byPyPDF2(file: str, passwords: list, tar_dir: str) -> bool:
+#     """
+#     处理 pdf 文件
+
+#     Args:
+#         file (str): 文件路径
+#         passwords (list): 密码列表
+#         tar_dir (str): 目标文件夹目录
+
+#     Returns:
+#         bool: 是否成功被密码本破译打开
+#     """
+#     reader = PyPDF2.PdfFileReader(file)
+#     fname = os.path.basename(file)
+#     if reader.isEncrypted:
+#         passed = False
+#         for pwd in passwords:
+#             try:
+#                 reader.decrypt(pwd)
+#                 passed = True
+#                 break
+#             except :
+#                 continue
+#     else:
+#         # 如果文件没有加密, 则置passed为True
+#         passed = True
+
+#         # 如果通过检测, 那么将文件转存到文件夹中
+#     if passed:
+#         write_pdf = PyPDF2.PdfFileWriter()
+#         write_pdf.appendPagesFromReader(reader)
+#         with open(path.join(tar_dir, fname), "wb") as f:
+#             write_pdf.write(f)
+
+#     return passed
+
+
+
 def func_pdf(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 pdf 文件
@@ -358,27 +400,24 @@ def func_pdf(file: str, passwords: list, tar_dir: str) -> bool:
     Returns:
         bool: 是否成功被密码本破译打开
     """
-    reader = PyPDF2.PdfFileReader(file)
     fname = os.path.basename(file)
-    if reader.isEncrypted:
+    try:
+        # 如果文件没有加密, 则置passed为True
+        pdf = pikepdf.open(file)
+        passed = True
+    except:
         passed = False
         for pwd in passwords:
             try:
-                reader.decrypt(file, pwd=pwd)
+                pdf = pikepdf.open(file, password=pwd)
                 passed = True
                 break
             except :
                 continue
-    else:
-        # 如果文件没有加密, 则置passed为True
-        passed = True
 
-        # 如果通过检测, 那么将文件转存到文件夹中
+    # 如果通过检测, 那么将文件转存到文件夹中
     if passed:
-        write_pdf = PyPDF2.PdfFileWriter()
-        write_pdf.appendPagesFromReader(reader)
-        with open(path.join(tar_dir, fname), "wb") as f:
-            write_pdf.write(f)
+        pdf.save(path.join(tar_dir, fname))
 
     return passed
 

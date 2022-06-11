@@ -90,9 +90,9 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.label.setText(_translate("Dialog", "等待进程..."))
 
-        self.lineEdit_pass.setText("/Users/leonard/Documents/Projects/Temp/enfile/密码.txt")
-        self.lineEdit_from.setText("/Users/leonard/Documents/Projects/Temp/enfile/test")
-        self.lineEdit_to.setText("/Users/leonard/Documents/Projects/Temp/enfile/testout")
+        self.lineEdit_pass.setText("/home/leonard/Documents/Projects/pythonPractice/enfile/test/pass.txt")
+        self.lineEdit_from.setText("/home/leonard/Documents/Projects/pythonPractice/enfile/test/in")
+        self.lineEdit_to.setText("/home/leonard/Documents/Projects/pythonPractice/enfile/test/out")
 
     def _open_file(self, wid):
         filename = QtWidgets.QFileDialog.getOpenFileName(None, "Open", "")
