@@ -4,7 +4,7 @@ import platform
 import shutil
 
 from io import BytesIO
-from typing import Callable
+from typing import Callable, Tuple
 
 import rarfile
 import zipfile
@@ -64,27 +64,26 @@ def allpassSame(passlist: str) -> bool:
     return res
 
 
-def makeTempDir(prefix: str) -> bool:
+def makeTempDir(prefix: str) -> Tuple[bool, str, str]:
     # 将 PASSED_DIR_NAME, FAILED_DIR_NAME 重新定义为有前缀的格式
-    global PASSED_DIR_NAME, FAILED_DIR_NAME
-    PASSED_DIR_NAME = path.join(prefix, PASSED_DIR_NAME)
-    FAILED_DIR_NAME = path.join(prefix, FAILED_DIR_NAME)
+    passed_dir = path.join(prefix, PASSED_DIR_NAME)
+    failed_dir = path.join(prefix, FAILED_DIR_NAME)
     try:
-        os.mkdir(PASSED_DIR_NAME)
-        os.mkdir(FAILED_DIR_NAME)
-        return True
+        os.mkdir(passed_dir)
+        os.mkdir(failed_dir)
+        return True, passed_dir, failed_dir
     except FileExistsError:
-        return False
+        return False, passed_dir, failed_dir
 
 
-def func_office(file: str, passwords: list) -> bool:
+def func_office(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 office 文件
 
     对 office 文件的处理依赖于包 msoffcrypto, 参照代码:
         https://github.com/nolze/msoffcrypto-tool/blob/master/msoffcrypto/__main__.py
 
-    在本函数中, 如果发现密码正确则会直接将文件写入到 PASSED_DIR_NAME 中. 
+    在本函数中, 如果发现密码正确则会直接将文件写入到 tar_dir 中. 
 
     Args:
         file (str): 文件路径
@@ -100,7 +99,7 @@ def func_office(file: str, passwords: list) -> bool:
     except Exception as e:
         # 如果打开失败, 可能是没有加密或者不支持的格式, 提供一个警告
         print(f"警告: 文件 \"{fname}\" 可能未加密或不支持此格式")
-        shutil.copy(file, os.path.join(PASSED_DIR_NAME, fname))
+        shutil.copy(file, os.path.join(tar_dir, fname))
         fin.close()
         return False
         
@@ -126,7 +125,7 @@ def func_office(file: str, passwords: list) -> bool:
     # 如果通过检测, 那么将文件转存到文件夹中
     if passed:
         print(fname, usdpwd)
-        with open(path.join(PASSED_DIR_NAME, fname), "wb") as f:
+        with open(path.join(tar_dir, fname), "wb") as f:
             officeF.decrypt(f)
 
     fin.close()
@@ -181,13 +180,14 @@ class ArchiveInterface:
         self.obj.close()
 
 
-def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = False) -> bool:
+def func_archive(fileIntface: ArchiveInterface, passwords: list, tar_dir: str, auto: bool = False) -> bool:
     """
     处理 归档 文件
 
     Args:
         file (ArchiveInterface): 归档文件接口对象
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹目录
 
     Returns:
         bool: 是否成功被密码本破译打开
@@ -196,7 +196,7 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
 
     if auto:
         try:
-            os.mkdir(path.join(PASSED_DIR_NAME, fname))
+            os.mkdir(path.join(tar_dir, fname))
         except:
             pass
     
@@ -220,7 +220,7 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
                         fileIntface.extract(
                             zinfo, 
                             pwd=pwd, 
-                            path=path.join(PASSED_DIR_NAME, fname)
+                            path=path.join(tar_dir, fname)
                         )
                     else:
                         fileIntface.open(
@@ -237,7 +237,7 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
             if auto:
                 fileIntface.extract(
                     zinfo, 
-                    path=path.join(PASSED_DIR_NAME, fname)
+                    path=path.join(tar_dir, fname)
                 )
             passed = True
         
@@ -252,13 +252,13 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
     # 判断提取结果
     if auto:
         if pas_file == 0:
-            shutil.rmtree(path.join(PASSED_DIR_NAME, fname))
+            shutil.rmtree(path.join(tar_dir, fname))
         elif pas_file != all_file:
-            os.renames(path.join(PASSED_DIR_NAME, fname), path.join(PASSED_DIR_NAME, fname) + "_part")
+            os.renames(path.join(tar_dir, fname), path.join(tar_dir, fname) + "_part")
     else:
         if pas_file != 0:
             # 如果存在文件密码正确: 复制压缩包到目标路径, 添加密码本
-            shutil.copy(fileIntface.filename, os.path.join(PASSED_DIR_NAME, fname))
+            shutil.copy(fileIntface.filename, os.path.join(tar_dir, fname))
             need_note = True
             if len(passlist) > 0 and allpassSame(passlist):
                 if passlist[0] is None:
@@ -270,7 +270,7 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
                     password_note = f"压缩包密码\t{fin_pass}\n\n" + password_note
 
             if need_note:
-                with open(os.path.join(PASSED_DIR_NAME, fname + "_pass.txt"), "w", encoding="utf-8") as f:
+                with open(os.path.join(tar_dir, fname + "_pass.txt"), "w", encoding="utf-8") as f:
                     f.write(password_note)
     
     fileIntface.close()
@@ -278,7 +278,7 @@ def func_archive(fileIntface: ArchiveInterface, passwords: list, auto: bool = Fa
     return pas_file == all_file
 
 
-def func_zip_auto(file: str, passwords: list) -> bool:
+def func_zip_auto(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 zip 文件
         会自动解压文件
@@ -286,34 +286,36 @@ def func_zip_auto(file: str, passwords: list) -> bool:
     Args:
         file (str): 文件路径
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹路径
 
     Returns:
         bool: 是否成功被密码本破译打开
     """
     return (
-        func_archive(ArchiveInterface(file, zipfile.ZipFile), passwords, True) or
-        func_archive(ArchiveInterface(file, pyzipper.AESZipFile), passwords, True)
+        func_archive(ArchiveInterface(file, zipfile.ZipFile), passwords, tar_dir, True) or
+        func_archive(ArchiveInterface(file, pyzipper.AESZipFile), passwords, tar_dir, True)
     )
 
 
-def func_zip(file: str, passwords: list) -> bool:
+def func_zip(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 zip 文件
 
     Args:
         file (str): 文件路径
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹
 
     Returns:
         bool: 是否成功被密码本破译打开
     """
     return (
-        func_archive(ArchiveInterface(file, zipfile.ZipFile), passwords) or 
-        func_archive(ArchiveInterface(file, pyzipper.AESZipFile), passwords)
+        func_archive(ArchiveInterface(file, zipfile.ZipFile), passwords, tar_dir) or 
+        func_archive(ArchiveInterface(file, pyzipper.AESZipFile), passwords, tar_dir)
     )
 
 
-def func_rar_auto(file: str, passwords: list) -> bool:
+def func_rar_auto(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 rar 文件
         会自动解压文件
@@ -321,34 +323,37 @@ def func_rar_auto(file: str, passwords: list) -> bool:
     Args:
         file (str): 文件路径
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹路径
 
     Returns:
         bool: 是否成功被密码本破译打开
     """
-    return func_archive(ArchiveInterface(file), passwords, True)
+    return func_archive(ArchiveInterface(file), passwords, tar_dir, True)
 
 
-def func_rar(file: str, passwords: list) -> bool:
+def func_rar(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 rar 文件
 
     Args:
         file (str): 文件路径
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹路径
 
     Returns:
         bool: 是否成功被密码本破译打开
     """
-    return func_archive(ArchiveInterface(file), passwords)
+    return func_archive(ArchiveInterface(file), passwords, tar_dir)
 
         
-def func_pdf(file: str, passwords: list) -> bool:
+def func_pdf(file: str, passwords: list, tar_dir: str) -> bool:
     """
     处理 pdf 文件
 
     Args:
         file (str): 文件路径
         passwords (list): 密码列表
+        tar_dir (str): 目标文件夹目录
 
     Returns:
         bool: 是否成功被密码本破译打开
@@ -372,7 +377,7 @@ def func_pdf(file: str, passwords: list) -> bool:
     if passed:
         write_pdf = PyPDF2.PdfFileWriter()
         write_pdf.appendPagesFromReader(reader)
-        with open(path.join(PASSED_DIR_NAME, fname), "wb") as f:
+        with open(path.join(tar_dir, fname), "wb") as f:
             write_pdf.write(f)
 
     return passed
@@ -399,16 +404,24 @@ def each_file(filepath, new_filepath, passwords):
     l_dir = os.listdir(filepath)  # 读取目录下的文件或文件夹
     failed_files = []
 
+    ok, passed, failed = makeTempDir(new_filepath)
+
+    if not ok:
+        print("已存在success/failed文件夹, 其中文件可能被覆盖")
+        # print("自动创建文件夹失败, 检查存放文件目录是否正确")
+        # exit(0)
+        pass
+
     for one_dir in l_dir:  # 进行循环
         full_path = os.path.join(filepath, one_dir)  # 构造路径
-        new_full_path = os.path.join(FAILED_DIR_NAME, one_dir)
+        new_full_path = os.path.join(failed, one_dir)
         if os.path.isfile(full_path):  
             # 如果是文件类型就执行转移操作
 
             # 根据扩展名选择合适的函数进行处理
             spl = os.path.splitext(full_path)[1]
 
-            if not (spl in detector and detector[spl](full_path, passwords)):
+            if not (spl in detector and detector[spl](full_path, passwords, passed)):
                 # 如果打开失败, 则将文件复制到失败路径中
                 failed_files.append(one_dir)
                 shutil.copy(full_path, new_full_path)
@@ -429,11 +442,7 @@ if __name__ == '__main__':
     pwd_path = "./测试1/密码.txt" # "/Users/leonard/Documents/Projects/Temp/enfiles/测试1/密码.txt"
     old_path = "./测试1/" # "/Users/leonard/Documents/Projects/Temp/enfiles/测试1/"
     new_path = "./结果/" # "/Users/leonard/Documents/Projects/Temp/enfiles/2/"
-    if not makeTempDir(new_path):
-        print("已存在success/failed文件夹, 其中文件可能被覆盖")
-        # print("自动创建文件夹失败, 检查存放文件目录是否正确")
-        # exit(0)
-        pass
+    
 
     passwords = getPasswordList(pwd_path)
 
