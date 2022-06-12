@@ -13,6 +13,7 @@ import pyzipper
 import pikepdf
 
 import msoffcrypto as ms
+import olefile
 from msoffcrypto import exceptions as msexcept
 
 
@@ -22,9 +23,9 @@ FAILED_DIR_NAME = "failed"
 
 if os.system("whereis unrar") != 0:
     if platform.system() in ['Darwin']:
-        rarfile.UNRAR_TOOL = "./unrar"
+        rarfile.UNRAR_TOOL = "./bin/unrar"
     elif platform.system() in ['Windows', 'windows', 'win32']:
-        rarfile.UNRAR_TOOL = "./UnRAR.exe"
+        rarfile.UNRAR_TOOL = "./bin/unrar.exe"
     else:
         print("There is no suitable unrar tool in system!")
         exit(1)
@@ -95,33 +96,43 @@ def func_office(file: str, passwords: list, tar_dir: str) -> bool:
     """
     fname = path.basename(file)
     fin = open(file, "rb")
-    try:
-        officeF = ms.OfficeFile(fin)
-    except Exception as e:
-        # 如果打开失败, 可能是没有加密或者不支持的格式, 提供一个警告
-        print(f"警告: 文件 \"{fname}\" 可能未加密或不支持此格式")
-        shutil.copy(file, os.path.join(tar_dir, fname))
-        fin.close()
-        return False
-        
+
+    # check an office file is valid or not
+    # refer: https://github.com/nolze/msoffcrypto-tool/blob/master/msoffcrypto/__main__.py, line23
+    # 
+    # try:
+    #     officeF = ms.OfficeFile(fin)
+    # except Exception as e:
+    #     # 如果打开失败, 可能是没有加密或者不支持的格式, 提供一个警告
+    #     print(f"警告: 文件 \"{fname}\" 可能未加密或不支持此格式")
+    #     shutil.copy(file, os.path.join(tar_dir, fname))
+    #     fin.close()
+    #     return False
+
     usdpwd = ""
-    if officeF.is_encrypted():
-        passed = False
-        for pwd in passwords:
-            try:
-                officeF.load_key(pwd)
-                # 如果密码本中存在正确的密码, 那么置passed为True并退出循环
-                bio = BytesIO()
-                officeF.decrypt(bio)
-                bio.close()
-                passed = True
-                usdpwd = pwd
-                break
-            except msexcept.InvalidKeyError:
-                continue
+    if not olefile.isOleFile(file):
+        shutil.copy(file, path.join(tar_dir, fname))
+        fin.close()
+        return True
     else:
-        # 如果文件没有加密, 则置passed为True
-        passed = True
+        officeF = ms.OfficeFile(fin)     
+        if officeF.is_encrypted():
+            passed = False
+            for pwd in passwords:
+                try:
+                    officeF.load_key(pwd)
+                    # 如果密码本中存在正确的密码, 那么置passed为True并退出循环
+                    bio = BytesIO()
+                    officeF.decrypt(bio)
+                    bio.close()
+                    passed = True
+                    usdpwd = pwd
+                    break
+                except msexcept.InvalidKeyError:
+                    continue
+        else:
+            # 如果文件没有加密, 则置passed为True
+            passed = True
     
     # 如果通过检测, 那么将文件转存到文件夹中
     if passed:
